@@ -179,6 +179,10 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
 .menu .warn { font-size: 12.5px; color: var(--spend); margin: 0; }
 .menu .toggle { justify-self: start; background: var(--surface); }
 .card-title .repeat { font-weight: 600; font-size: 13px; opacity: .8; flex: none; }
+.menu .pos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.menu .pos .btn { padding: 4px 10px; }
+.menu .pos .btn:disabled { opacity: .4; cursor: default; }
+.menu .pos-n { font-size: 13px; color: var(--muted); min-width: 44px; text-align: center; }
 
 .rows { list-style: none; margin: 0; padding: 0; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 6px; padding: 0 6px 0 4px; border-bottom: 1px solid var(--hair); min-height: 40px; }
@@ -457,10 +461,30 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
   // Tabelas que repetem os valores no mês seguinte. Sem escolha salva, vale para "Gastos Fixos" e "Salário".
   const plainName = (s) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
   const isRepeat = (c) => typeof c.repeat === "boolean" ? c.repeat : /fixo|salario/.test(plainName(c.name));
-  const colorOf = (kind, c) => {
-    const idx = Number.isInteger(c.color) ? c.color : (kind === "income" ? 0 : (ctxs(kind).indexOf(c) % (KCOUNT - 1)) + 1);
-    return `var(--k${idx % KCOUNT})`;
-  };
+  const colorIdx = (kind, c) => (Number.isInteger(c.color) ? c.color : (kind === "income" ? 0 : (ctxs(kind).indexOf(c) % (KCOUNT - 1)) + 1)) % KCOUNT;
+  const colorOf = (kind, c) => `var(--k${colorIdx(kind, c)})`;
+  // Muda a tabela de posição dentro do mesmo tipo. A cor de quem ainda usa a cor
+  // automática (que vem da posição) é gravada antes, para nada mudar de cor ao mover.
+  function moveCtx(kind, id, to) {
+    const list = ctxs(kind), from = list.findIndex(c => c.id === id);
+    to = Math.max(0, Math.min(list.length - 1, to));
+    if (from < 0 || from === to) return;
+    list.forEach(c => { if (!Number.isInteger(c.color)) c.color = colorIdx(kind, c); });
+    const before = list.slice();
+    const next = list.slice();
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    state.settings[kind] = next;
+    store.saveSettings();
+    render();
+    const name = before[from].name;
+    undo = () => {
+      const ids = new Set(ctxs(kind).map(c => c.id));
+      if (before.length !== ids.size || !before.every(c => ids.has(c.id))) return;
+      state.settings[kind] = before.map(c => ctxs(kind).find(x => x.id === c.id));
+      store.saveSettings(); render();
+    };
+    showToast(`"${name}" movida para a posição ${to + 1}`, 6000);
+  }
   const entries = () => (state.selected && state.months[state.selected]) ? state.months[state.selected].entries : [];
   function parseMoney(s) {
     s = String(s || "").trim().replace(/[R$\s]/g, "");
@@ -661,8 +685,14 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
     name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; render(); } });
     const swatches = el("div", { class: "swatches" }, ...Array.from({ length: KCOUNT }, (_, i) =>
       el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { c.color = i; store.saveSettings(); render(); } })));
+    const list = ctxs(kind), pos = list.indexOf(c);
+    const position = list.length < 2 ? null : [el("span", { class: "small" }, "Posição"), el("div", { class: "pos" },
+      el("button", { class: "btn", type: "button", disabled: pos === 0 || null, "aria-label": `Mover ${c.name} para antes`, onclick: () => moveCtx(kind, c.id, pos - 1) }, "← Antes"),
+      el("span", { class: "pos-n num", "aria-live": "polite" }, `${pos + 1} de ${list.length}`),
+      el("button", { class: "btn", type: "button", disabled: pos === list.length - 1 || null, "aria-label": `Mover ${c.name} para depois`, onclick: () => moveCtx(kind, c.id, pos + 1) }, "Depois →"))];
     return el("div", { class: "menu" },
       el("label", { for: `rn-${c.id}` }, "Nome da tabela"), name,
+      position,
       el("span", { class: "small" }, "Cor"), swatches,
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { c.repeat = !isRepeat(c); store.saveSettings(); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
