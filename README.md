@@ -138,8 +138,9 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Registros com nome e valor** dentro de cada tabela. Clique no nome ou no valor para editar e no × para remover.
 - **Resumo do mês**: quanto entrou, quanto saiu, quanto sobrou e uma barra com o peso de cada tabela na renda.
 - **Mover tabelas** de posição arrastando pela alça ⠿ ou pelos botões **← Antes / Depois →** no menu ⋯. A ordem vale para todos os meses.
-- **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir (só tabelas sem registros).
-- **Desfazer** por alguns segundos depois de remover, mover ou limpar.
+- **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
+- **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
+- **Desfazer** por alguns segundos depois de remover, mover, excluir ou limpar.
 
 ### Meses
 
