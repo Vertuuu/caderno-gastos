@@ -15,3 +15,7 @@ desktop.ini
 .vscode/
 .idea/
 *.log
+
+# Arquivos temporários e cópias danificadas dos dados
+*.tmp
+caderno.corrompido-*.json
