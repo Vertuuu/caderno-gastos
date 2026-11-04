@@ -157,7 +157,7 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
 
 /* ---------- Cartão-tabela ---------- */
 .card { background: color-mix(in srgb, var(--k) var(--row-k), var(--surface)); border: 1px solid color-mix(in srgb, var(--k) var(--card-k), var(--line)); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: grid; min-width: 0; }
-.card-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 14px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
+.card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 6px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
 .card-title { font-weight: 600; font-size: 15.5px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-title i { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); flex: none; }
@@ -179,6 +179,14 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
 .menu .warn { font-size: 12.5px; color: var(--spend); margin: 0; }
 .menu .toggle { justify-self: start; background: var(--surface); }
 .card-title .repeat { font-weight: 600; font-size: 13px; opacity: .8; flex: none; }
+.drag-handle { width: 22px; height: 30px; margin-right: -4px; border: 0; border-radius: 6px; background: transparent; color: var(--head-ink); opacity: .45; font-size: 16px; line-height: 1; padding: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag-handle:hover { opacity: .9; background: color-mix(in srgb, var(--head-ink) 14%, transparent); }
+.card-head > span:first-child { width: 8px; }
+.card.dragging { background: transparent; border: 2px dashed color-mix(in srgb, var(--k) 70%, var(--line)); box-shadow: none; }
+.card.dragging > * { visibility: hidden; }
+.drag-ghost { position: fixed; z-index: 50; margin: 0; pointer-events: none; opacity: .92; box-shadow: 0 18px 40px rgb(0 0 0 / .28); transform: rotate(1.5deg); }
+.drag-ghost .drag-handle { cursor: grabbing; }
+body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select: none; }
 .menu .pos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .menu .pos .btn { padding: 4px 10px; }
 .menu .pos .btn:disabled { opacity: .4; cursor: default; }
@@ -403,7 +411,7 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
       document.addEventListener("visibilitychange", () => { if (!document.hidden) this.pull(false); });
     },
     busy() {
-      if (this.pending > 0 || state.edit || state.menu || (window.goalsBusy && window.goalsBusy())) return true;
+      if (this.pending > 0 || state.edit || state.menu || state.dragging || (window.goalsBusy && window.goalsBusy())) return true;
       const a = document.activeElement;
       return a && a.tagName === "INPUT" && a.value !== "" && a.type !== "month";
     },
@@ -484,6 +492,67 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
       store.saveSettings(); render();
     };
     showToast(`"${name}" movida para a posição ${to + 1}`, 6000);
+  }
+
+  // Arrastar pela alça ⠿ (mouse e toque). O cartão vira um espaço reservado que
+  // troca de lugar com os outros do mesmo quadro; ao soltar, a ordem é salva.
+  function startDrag(ev, kind, id) {
+    if (state.dragging || (ev.pointerType === "mouse" && ev.button !== 0)) return;
+    const handle = ev.currentTarget, card = handle.closest(".card"), board = card.parentElement;
+    ev.preventDefault();
+    const r = card.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+    const ghost = card.cloneNode(true);
+    ghost.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+    ghost.classList.add("drag-ghost");
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.style.width = r.width + "px";
+    document.body.append(ghost);
+    card.classList.add("dragging");
+    document.body.classList.add("is-dragging");
+    state.dragging = true;
+    try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
+
+    let x = ev.clientX, y = ev.clientY, last = null, raf = 0;
+    const place = () => { ghost.style.left = (x - dx) + "px"; ghost.style.top = (y - dy) + "px"; };
+    const scroll = () => {
+      const edge = 70, h = innerHeight;
+      const v = y < edge ? -Math.ceil((edge - y) / 5) : y > h - edge ? Math.ceil((y - (h - edge)) / 5) : 0;
+      if (v) { scrollBy(0, v); hover(); }
+      raf = requestAnimationFrame(scroll);
+    };
+    const hover = () => {
+      const t = document.elementFromPoint(x, y);
+      const over = t && t.closest(".card");
+      if (!over || over === card || over.parentElement !== board) { last = null; return; }
+      if (over === last) return;          // evita trocar de novo enquanto o ponteiro continua no mesmo cartão
+      last = over;
+      const cards = [...board.children];
+      board.insertBefore(card, cards.indexOf(over) > cards.indexOf(card) ? over.nextSibling : over);
+    };
+    const move = (e) => { x = e.clientX; y = e.clientY; place(); hover(); };
+    const finish = (save) => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", cancel);
+      document.removeEventListener("keydown", esc, true);
+      cancelAnimationFrame(raf);
+      ghost.remove();
+      card.classList.remove("dragging");
+      document.body.classList.remove("is-dragging");
+      state.dragging = false;
+      const to = [...board.querySelectorAll(":scope > .card")].indexOf(card);
+      const from = ctxs(kind).findIndex(c => c.id === id);
+      if (save && to >= 0 && to !== from) moveCtx(kind, id, to); else render();
+    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const esc = (e) => { if (e.key === "Escape") { e.stopPropagation(); finish(false); } };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", cancel);
+    document.addEventListener("keydown", esc, true);
+    place();
+    raf = requestAnimationFrame(scroll);
   }
   const entries = () => (state.selected && state.months[state.selected]) ? state.months[state.selected].entries : [];
   function parseMoney(s) {
@@ -608,7 +677,9 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
     const draft = state.drafts[c.id] || { name: "", value: "" };
     const menuOpen = state.menu === c.id;
 
+    const canMove = ctxs(kind).length > 1;
     const head = el("div", { class: "card-head" },
+      canMove ? el("button", { class: "drag-handle", type: "button", tabindex: "-1", "aria-hidden": "true", title: "Arraste para mover", onpointerdown: (ev) => startDrag(ev, kind, c.id) }, "⠿") : el("span"),
       el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name),
         isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null),
       el("span", { class: "card-total" }, fmt(sum)),
@@ -638,7 +709,7 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
       render();
     } }, nameIn, valIn, addBtn, err);
 
-    return el("article", { class: "card", style: `--k:${k}` },
+    return el("article", { class: "card", "data-id": c.id, style: `--k:${k}` },
       head,
       el("div", { class: "share-bar", title: `${Math.round(share)}% ${kind === "income" ? "das entradas" : "da renda"}` }, el("i", { style: `width:${share}%` })),
       menuOpen ? menu(kind, c) : null,
