@@ -1,0 +1,17 @@
+# Dados pessoais (lançamentos, metas e backups diários)
+dados/
+
+# Preferências locais do painel (porta, tema, abrir navegador)
+app/config.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Sistema / editores
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.log
