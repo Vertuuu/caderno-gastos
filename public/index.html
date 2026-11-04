@@ -405,60 +405,195 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   };
 
   // ---------- Servidor ----------
+  // Cada documento (tabelas, metas e cada mês) é sincronizado separadamente. O aparelho guarda a última
+  // versão confirmada pelo servidor (base) e a revisão dela; ao enviar, diz em que revisão se baseou.
+  // Se outro aparelho mudou o documento no meio, o servidor responde 409 e o aparelho mescla por id.
+  const clone = (o) => o == null ? o : JSON.parse(JSON.stringify(o));
+  const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // Mescla três versões de uma lista de itens com id: base (última comum), local (este aparelho) e remota.
+  // Mudanças feitas só de um lado valem; se os dois mexeram no mesmo item, vale a daqui; nada que foi
+  // alterado em algum lado é perdido por uma exclusão do outro.
+  function mergeById(base, local, remote) {
+    base = base || []; local = local || []; remote = remote || [];
+    const B = new Map(base.map(x => [x.id, x])), R = new Map(remote.map(x => [x.id, x])), L = new Set(local.map(x => x.id));
+    const out = [];
+    for (const l of local) {
+      const b = B.get(l.id), r = R.get(l.id);
+      if (r) out.push(sameJson(l, r) || (b && sameJson(l, b)) ? (sameJson(l, r) ? l : r) : l);   // alterado aqui vence; se não, fica a versão de lá
+      else if (!b || !sameJson(l, b)) out.push(l);    // novo aqui, ou alterado aqui e apagado lá: mantém
+    }
+    remote.forEach((r, i) => {
+      if (L.has(r.id)) return;
+      const b = B.get(r.id);
+      if (b && sameJson(r, b)) return;                // apagado aqui e intacto lá: sai
+      let pos = out.length;                           // novo lá: entra antes do próximo vizinho de lá (ou no fim)
+      for (let j = i + 1; j < remote.length; j++) { const k = out.findIndex(x => x.id === remote[j].id); if (k >= 0) { pos = k; break; } }
+      out.splice(pos, 0, r);
+    });
+    return out;
+  }
+  function mergeDoc(key, base, local, remote) {
+    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []) };
+    if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
+    if (local === null) return null;                  // mês excluído aqui
+    const entries = mergeById(base && base.entries, local.entries, remote ? remote.entries : []);
+    return remote === null && entries.length === 0 ? null : { entries };
+  }
+  function docGet(key) {
+    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income };
+    if (key === "goals") return { goals: state.goals };
+    const m = state.months[key.slice(2)];
+    return m ? { entries: m.entries } : null;
+  }
+  function docSet(key, doc) {
+    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income };
+    else if (key === "goals") state.goals = doc.goals;
+    else if (doc) state.months[key.slice(2)] = { entries: doc.entries };
+    else delete state.months[key.slice(2)];
+  }
+  const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : (d.months[key.slice(2)] || null);
+  const docUrl = (key) => key === "settings" ? "api/settings" : key === "goals" ? "api/goals" : `api/months/${key.slice(2)}`;
+
   const store = {
-    ready: false, rev: -1, pending: 0, queues: {}, failing: false,
+    ready: false, rev: -1,
+    base: {}, docRev: {},          // última versão confirmada de cada documento e a revisão dela
+    dirty: new Set(),              // documentos com mudança local ainda não enviada
+    inflight: new Set(),           // documentos sendo enviados agora
+    rejected: {},                  // documento -> motivo, quando o servidor recusou
+    offline: false, backoff: 0, retryAt: 0, timer: null,
+    saveSeq: 0,                    // conta envios concluídos (descarta buscas que cruzaram com um envio)
+    heldSince: 0,                  // desde quando há mudanças remotas esperando a edição terminar
     async init() {
       await this.pull(true);
       setInterval(() => { if (!document.hidden) this.pull(false); }, 4000);
       document.addEventListener("visibilitychange", () => { if (!document.hidden) this.pull(false); });
+      window.addEventListener("beforeunload", (e) => { if (this.dirty.size || this.inflight.size) { e.preventDefault(); e.returnValue = ""; } });
     },
+    // Edição em andamento: aplicar dados remotos agora recriaria a tela e atrapalharia o usuário.
     busy() {
-      if (this.pending > 0 || state.edit || state.menu || state.dragging || (window.goalsBusy && window.goalsBusy())) return true;
+      if (state.edit || state.menu || state.dragging || (window.goalsBusy && window.goalsBusy())) return true;
       const a = document.activeElement;
       return a && a.tagName === "INPUT" && a.value !== "" && a.type !== "month";
     },
     async pull(first) {
-      if (!first && this.busy()) return;
+      const seq = this.saveSeq;
       try {
         const r = await fetch(`api/data?rev=${this.rev}`, { cache: "no-store" });
         if (!r.ok) throw new Error(r.status);
         const d = await r.json();
-        if (!first && this.busy()) return;
-        if (this.failing || first) setStatus("ok", "Tudo salvo no servidor");
-        this.failing = false;
-        if (d.unchanged) return;
-        this.rev = d.rev;
-        state.settings = d.settings || { expense: [], income: [] };
-        state.months = d.months || {};
-        state.goals = d.goals || [];
-        this.ready = true;
-        afterLoad();
+        const wasOffline = this.offline;
+        this.offline = false;
+        if (wasOffline) { this.backoff = 0; this.retryAt = 0; if (this.dirty.size) this.flushSoon(0); }
+        if (d.unchanged) { this.heldSince = 0; return this.updateStatus(); }
+        // uma busca que cruzou com um envio pode trazer dados de antes dele: espera a próxima
+        if (!first && (seq !== this.saveSeq || this.inflight.size)) return this.updateStatus();
+        if (!first && this.busy()) { this.heldSince = this.heldSince || Date.now(); return this.updateStatus(); }
+        this.apply(d);
       } catch (e) {
-        this.failing = true;
-        setStatus("error", "Sem conexão com o servidor. Verifique se ele está ligado e se você está na mesma rede.");
+        this.offline = true;
+        this.updateStatus();
         if (first) render();
       }
     },
-    enqueue(key, fn) {
-      this.pending++;
-      setStatus("wait", "Salvando…");
-      const prev = this.queues[key] || Promise.resolve();
-      const next = prev.then(fn).then(async (r) => {
-        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `erro ${r.status}`);
-        const { rev } = await r.json();
-        if (rev > this.rev) this.rev = rev;
-        if (this.pending === 1) setStatus("ok", "Tudo salvo no servidor");
-      }).catch((e) => {
-        setStatus("error", `Uma alteração não foi salva (${e.message === "Failed to fetch" ? "servidor fora do ar" : e.message}). Recarregue a página e tente de novo.`);
-      }).finally(() => { this.pending--; });
-      this.queues[key] = next;
-      return next;
+    apply(d) {
+      this.heldSince = 0;
+      this.rev = d.rev;
+      d.months = d.months || {};
+      const keys = new Set(["settings", "goals", ...Object.keys(d.months).map(m => "m:" + m), ...Object.keys(state.months).map(m => "m:" + m)]);
+      for (const key of keys) {
+        const remote = docFromData(d, key) || (key === "settings" ? { expense: [], income: [] } : key === "goals" ? { goals: [] } : null);
+        if (this.dirty.has(key)) docSet(key, mergeDoc(key, this.base[key], docGet(key), remote));
+        else docSet(key, clone(remote));
+        this.base[key] = clone(remote);
+        this.docRev[key] = (d.docRev && d.docRev[key]) || 0;
+      }
+      this.ready = true;
+      this.updateStatus();
+      afterLoad();
     },
-    put(url, body) { return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); },
-    saveSettings() { const b = { expense: state.settings.expense, income: state.settings.income }; return this.enqueue("settings", () => this.put("api/settings", b)); },
-    saveMonth(id) { const b = { entries: state.months[id].entries }; return this.enqueue("m:" + id, () => this.put(`api/months/${id}`, b)); },
-    saveGoals() { const b = { goals: state.goals }; return this.enqueue("goals", () => this.put("api/goals", b)); },
-    deleteMonth(id) { return this.enqueue("m:" + id, () => fetch(`api/months/${id}`, { method: "DELETE" })); },
+    mark(key) { this.dirty.add(key); delete this.rejected[key]; this.updateStatus(); this.flushSoon(50); },
+    flushSoon(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), Math.max(ms, this.retryAt - Date.now(), 0)); },
+    flush() { for (const key of [...this.dirty]) if (!this.inflight.has(key)) this.send(key); },
+    async send(key) {
+      this.dirty.delete(key);
+      this.inflight.add(key);
+      this.updateStatus();
+      let changed = false;
+      try {
+        for (let attempt = 0; ; attempt++) {
+          const doc = clone(docGet(key));
+          let r;
+          if (doc === null) r = await fetch(docUrl(key), { method: "DELETE" });
+          else r = await fetch(docUrl(key), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...doc, baseRev: this.docRev[key] || 0 }) });
+          const body = await r.json().catch(() => ({}));
+          if (r.status === 409 && attempt < 5) {
+            // outro aparelho mudou este documento: mescla com a versão atual do servidor e tenta de novo
+            docSet(key, mergeDoc(key, this.base[key], docGet(key), body.doc));
+            this.base[key] = clone(body.doc);
+            this.docRev[key] = body.docRev;
+            changed = true;
+            if (docGet(key) === null && body.doc === null) break;   // nada a enviar
+            continue;
+          }
+          if (r.ok || (doc === null && r.status === 404)) {
+            this.base[key] = doc;
+            if (body.docRev !== undefined) this.docRev[key] = body.docRev;
+            if (body.prevRev === this.rev) this.rev = body.rev;   // só avança se não perdeu mudança de outro aparelho
+          } else if (r.status >= 400 && r.status < 500 && r.status !== 409) {
+            this.rejected[key] = body.error || `erro ${r.status}`;
+          } else throw new Error(body.error || `erro ${r.status}`);
+          break;
+        }
+        this.saveSeq++;
+        this.backoff = 0; this.retryAt = 0; this.offline = false;
+      } catch (e) {
+        // sem conexão ou servidor sem conseguir gravar: guarda e tenta de novo, com espera crescente
+        this.dirty.add(key);
+        this.offline = true;
+        this.backoff = Math.min(Math.max(2000, this.backoff * 2), 30000);
+        this.retryAt = Date.now() + this.backoff;
+      } finally {
+        this.inflight.delete(key);
+        if (this.dirty.size) this.flushSoon(this.retryAt ? 0 : 50);
+        this.updateStatus();
+        if (changed) render();
+      }
+    },
+    // Exclui uma tabela e os registros dela em todos os meses numa única operação no servidor.
+    async deleteContext(kind, id, touchedMonths) {
+      try {
+        const r = await fetch(`api/contexts/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" });
+        if (!r.ok) throw new Error(r.status);
+        const body = await r.json();
+        for (const [key, doc] of Object.entries(body.docs || {})) {
+          if (this.dirty.has(key)) docSet(key, mergeDoc(key, this.base[key], docGet(key), doc));
+          this.base[key] = clone(doc);
+          this.docRev[key] = typeof body.docRev === "number" ? body.docRev : body.docRev[key];
+        }
+        if (body.prevRev === this.rev) this.rev = body.rev;
+        this.saveSeq++;
+        this.updateStatus();
+      } catch (e) {
+        // sem servidor agora: manda as versões já atualizadas deste aparelho pelo caminho normal
+        this.mark("settings");
+        touchedMonths.forEach(m => this.mark("m:" + m));
+      }
+    },
+    updateStatus() {
+      const waiting = this.dirty.size + this.inflight.size;
+      const rej = Object.values(this.rejected);
+      if (rej.length) setStatus("error", `Uma alteração foi recusada pelo servidor (${rej[0]}). Ela continua só neste aparelho.`);
+      else if (this.offline && waiting) setStatus("error", `Sem conexão com o servidor: ${waiting === 1 ? "1 alteração aguardando" : `${waiting} alterações aguardando`} envio. Tentando de novo…`);
+      else if (this.offline) setStatus("error", "Sem conexão com o servidor. Verifique se ele está ligado e se você está na mesma rede.");
+      else if (waiting) setStatus("wait", "Salvando…");
+      else if (this.heldSince && Date.now() - this.heldSince > 30000) setStatus("wait", "Há mudanças de outro aparelho: termine a edição para ver.");
+      else if (this.ready) setStatus("ok", "Tudo salvo no servidor");
+    },
+    saveSettings() { this.mark("settings"); },
+    saveMonth(id) { this.mark("m:" + id); },
+    saveGoals() { this.mark("goals"); },
+    deleteMonth(id) { this.mark("m:" + id); },   // o mês já saiu de state.months: o envio vira exclusão
   };
   function setStatus(s, text) { $("status").dataset.state = s; $("statusText").textContent = text; }
 
@@ -739,7 +874,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         if (done) return; done = true;
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
-          if (name && value > 0 && (name !== e.name || value !== e.value)) { e.name = name; e.value = value; store.saveMonth(state.selected); }
+          const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
+          if (t && name && value > 0 && (name !== t.name || value !== t.value)) { t.name = name; t.value = value; store.saveMonth(state.selected); }
         }
         state.edit = null; render();
       };
@@ -759,15 +895,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function menu(kind, c) {
     const used = Object.values(state.months).reduce((n, m) => n + m.entries.filter(e => e.ctx === c.id).length, 0);
+    const cur = () => ctxs(kind).find(x => x.id === c.id) || c;   // a sincronização pode trocar o objeto
     const name = el("input", { id: `rn-${c.id}`, type: "text", value: c.name, maxlength: "40" });
     const save = () => {
-      const v = name.value.trim().replace(/\s+/g, " ");
-      if (v && v !== c.name && !ctxs(kind).some(x => x !== c && x.name.toLowerCase() === v.toLowerCase())) { c.name = v; store.saveSettings(); }
+      const v = name.value.trim().replace(/\s+/g, " "), t = cur();
+      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && x.name.toLowerCase() === v.toLowerCase())) { t.name = v; store.saveSettings(); }
       state.menu = null; render();
     };
     name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; render(); } });
     const swatches = el("div", { class: "swatches" }, ...Array.from({ length: KCOUNT }, (_, i) =>
-      el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { c.color = i; store.saveSettings(); render(); } })));
+      el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { cur().color = i; store.saveSettings(); render(); } })));
     const list = ctxs(kind), pos = list.indexOf(c);
     const position = list.length < 2 ? null : [el("span", { class: "small" }, "Posição"), el("div", { class: "pos" },
       el("button", { class: "btn", type: "button", disabled: pos === 0 || null, "aria-label": `Mover ${c.name} para antes`, onclick: () => moveCtx(kind, c.id, pos - 1) }, "← Antes"),
@@ -777,7 +914,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("label", { for: `rn-${c.id}` }, "Nome da tabela"), name,
       position,
       el("span", { class: "small" }, "Cor"), swatches,
-      el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { c.repeat = !isRepeat(c); store.saveSettings(); render(); } },
+      el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
       el("div", { class: "menu-actions" },
         el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
@@ -817,13 +954,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       if (!es.some(e => e.ctx === id)) continue;
       removed[m] = es.map((e, i) => [i, e]).filter(([, e]) => e.ctx === id);
       state.months[m].entries = es.filter(e => e.ctx !== id);
-      store.saveMonth(m);
     }
     state.settings[kind] = list.filter(x => x.id !== id);
     delete state.drafts[id];
     if (state.menu === id) state.menu = null;
     if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
-    store.saveSettings();
+    store.deleteContext(kind, id, Object.keys(removed));   // uma única operação no servidor
     render();
     undo = () => {
       if (!ctxs(kind).some(x => x.id === id)) {
@@ -873,7 +1009,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (idx < 0) return;
     const [gone] = list.splice(idx, 1);
     store.saveMonth(mid); render();
-    undo = () => { state.months[mid].entries.splice(idx, 0, gone); store.saveMonth(mid); render(); };
+    undo = () => {
+      const m = state.months[mid];
+      if (!m || m.entries.some(x => x.id === gone.id)) return;   // mês excluído depois, ou item já voltou
+      m.entries.splice(Math.min(idx, m.entries.length), 0, gone);
+      store.saveMonth(mid); render();
+    };
     showToast(`"${gone.name}" removido`);
   }
   function showToast(text, ms = 6000) {
@@ -928,7 +1069,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const gone = state.months[id].entries;
     state.months[id].entries = [];
     store.saveMonth(id); render();
-    undo = () => { if (state.months[id]) { state.months[id].entries = gone; store.saveMonth(id); goto(id); } };
+    undo = () => {
+      // devolve os itens apagados sem perder os que entraram depois (aqui ou em outro aparelho)
+      const cur = state.months[id] ? state.months[id].entries : [];
+      const back = gone.filter(e => !cur.some(x => x.id === e.id));
+      state.months[id] = { entries: [...back, ...cur] };
+      store.saveMonth(id); goto(id);
+    };
     showToast(`Registros de ${monthLabel(id)} apagados`, 10000);
   }
 
@@ -949,7 +1096,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     state.selected = ids[i + 1] || ids[i - 1] || null;
     state.menu = null; state.edit = null;
     render();
-    undo = () => { state.months[id] = gone; store.saveMonth(id); goto(id); };
+    undo = () => {
+      const cur = state.months[id] ? state.months[id].entries : [];   // o mês pode ter sido recriado no meio
+      state.months[id] = { entries: [...gone.entries.filter(e => !cur.some(x => x.id === e.id)), ...cur] };
+      store.saveMonth(id); goto(id);
+    };
     showToast(`${monthLabel(id)} excluído`, 10000);
   }
   $("clearMonth").addEventListener("click", clearMonth);

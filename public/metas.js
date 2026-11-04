@@ -67,7 +67,7 @@
     render();
     api.setUndo(() => {
       const list = api.state.months[mid] && api.state.months[mid].entries;
-      const i = list ? list.indexOf(entry) : -1;
+      const i = list ? list.findIndex(x => x.id === entry.id) : -1;   // por id: a sincronização troca os objetos
       if (i >= 0) { list.splice(i, 1); api.store.saveMonth(mid); render(); }
     }, `Parcela de ${api.fmt(entry.value)} lançada em ${c.name} · ${api.monthLabel(mid)}`);
   }
@@ -158,6 +158,8 @@
 
   // ---------- Edição na célula ----------
   function commitEdit(g, field, raw) {
+    g = goals().find(x => x.id === g.id);   // versão atual (a sincronização pode ter trocado o objeto)
+    if (!g) { edit = null; return render(); }
     if (field === "name") {
       const v = raw.trim().replace(/\s+/g, " ");
       if (v && norm(v) !== norm(g.name) && !goals().some(x => x !== g && norm(x.name) === norm(v))) {
@@ -239,11 +241,15 @@
       ok: "Excluir meta",
     });
     if (!ok) return;
-    const list = goals(), idx = list.indexOf(g);
+    const list = goals(), idx = list.findIndex(x => x.id === g.id);
     if (idx < 0) return;
+    g = list[idx];
     list.splice(idx, 1);
     save();
-    api.setUndo(() => { goals().splice(idx, 0, g); save(); }, `Meta "${g.name}" excluída`);
+    api.setUndo(() => {
+      if (goals().some(x => x.id === g.id)) return;
+      goals().splice(Math.min(idx, goals().length), 0, g); save();
+    }, `Meta "${g.name}" excluída`);
   }
 
   // ---------- Render ----------
