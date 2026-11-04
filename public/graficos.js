@@ -7,11 +7,15 @@
   const MAX_SERIES = 8; // acima disso, o resto vira "Outros"
   const MONTHS_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-  const cs = Object.assign(
-    { period: "month", key: null, data: "expense", comp: "donut", evo: "stacked", table: false },
-    (() => { try { return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) { return {}; } })()
-  );
-  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ ...cs, key: null })); } catch (e) {} };
+  // Preferências guardadas neste aparelho; valores desconhecidos voltam ao padrão.
+  const ALLOWED = { period: ["month", "semester", "year"], data: ["expense", "income", "all"], comp: ["donut", "bars", "columns"], evo: ["stacked", "lines"] };
+  const cs = { period: "month", key: null, data: "expense", comp: "donut", evo: "stacked" };
+  (() => {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) {}
+    for (const [k, list] of Object.entries(ALLOWED)) if (list.includes(saved[k])) cs[k] = saved[k];
+  })();
+  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ period: cs.period, data: cs.data, comp: cs.comp, evo: cs.evo })); } catch (e) {} };
 
   let api = null;
   const $ = (id) => document.getElementById(id);
@@ -52,15 +56,23 @@
   }
 
   // ---------- Agregação ----------
-  function entriesOf(months) { return months.flatMap(id => api.state.months[id].entries); }
+  const ORPHAN = "_semtabela";
+  function entriesOf(months) { return months.flatMap(id => api.state.months[id] ? api.state.months[id].entries : []); }
+  // Soma por tabela, em centavos; registros de tabelas que não existem mais viram uma única "Sem tabela".
   function sumBy(months, kind) {
+    const known = new Set(api.ctxs(kind).map(c => c.id));
     const map = new Map();
-    entriesOf(months).forEach(e => { if (e.kind === kind) map.set(e.ctx, (map.get(e.ctx) || 0) + e.value); });
+    entriesOf(months).forEach(e => {
+      if (e.kind !== kind) return;
+      const id = known.has(e.ctx) ? e.ctx : ORPHAN;
+      map.set(id, (map.get(id) || 0) + Math.round(e.value * 100));
+    });
+    for (const [k, c] of map) map.set(k, c / 100);
     return map;
   }
-  const total = (months, kind) => entriesOf(months).filter(e => e.kind === kind).reduce((s, e) => s + e.value, 0);
-  function ctxName(id) { const c = api.findCtx(id)[1]; return c ? c.name : "Tabela removida"; }
-  function ctxColor(kind, id) { const c = api.findCtx(id)[1]; return c ? api.colorOf(kind, c) : "var(--faint)"; }
+  const total = (months, kind) => api.sumMoney(entriesOf(months).filter(e => e.kind === kind).map(e => e.value));
+  function ctxName(id) { if (id === ORPHAN) return "Sem tabela"; const c = api.findCtx(id)[1]; return c ? c.name : "Sem tabela"; }
+  function ctxColor(kind, id) { const c = id === ORPHAN ? null : api.findCtx(id)[1]; return c ? api.colorOf(kind, c) : "var(--faint)"; }
 
   // Itens de composição na ordem de valor; o que passar de MAX_SERIES vira "Outros".
   function compItems(months, kind) {
@@ -70,7 +82,7 @@
     if (items.length > MAX_SERIES) {
       const rest = items.slice(MAX_SERIES - 1);
       items = items.slice(0, MAX_SERIES - 1);
-      items.push({ id: "_outros", label: `Outros (${rest.length})`, value: rest.reduce((s, i) => s + i.value, 0), color: "var(--faint)" });
+      items.push({ id: "_outros", label: `Outros (${rest.length})`, value: api.sumMoney(rest.map(i => i.value)), color: "var(--muted)" });
     }
     return items;
   }
@@ -82,7 +94,7 @@
     const a = Math.abs(v);
     if (a >= 1e6) return `R$ ${(v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
     if (a >= 1e3) return `R$ ${(v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
-    return `R$ ${Math.round(v)}`;
+    return `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;   // mostra centavos em eixos pequenos (0,75 · 1,5)
   }
   function niceMax(v) {
     if (v <= 0) return 100;
@@ -237,7 +249,8 @@
     const yOf = (v) => padT + H - v / max * H;
     const tipFor = (i) => {
       const lines = [api.monthLabel(months[i]), ...series.map(s => `${s.label}: ${api.fmt(s.values[i])}`)];
-      if (mode === "all") lines.push(`Saldo: ${api.fmt(series[0].values[i] - series[1].values[i])}`);
+      const val = (id) => { const s = series.find(x => x.id === id); return s ? s.values[i] : 0; };   // a série pode ter sido filtrada
+      if (mode === "all") lines.push(`Saldo: ${api.fmt(api.sumMoney([val("in"), -val("out")]))}`);
       else lines.push(`Total: ${api.fmt(totals[i])}`);
       return lines.join("\n");
     };
@@ -282,16 +295,20 @@
 
   // ---------- Análises ----------
   function insights(ctx) {
-    const { months, prevMonths, mode, period, tin, tout, ptin, ptout, compOut, compIn } = ctx;
+    const { months, avgMonths, prevMonths, mode, period, tin, tout, ptin, ptout, compOut, compIn, partial, skipped } = ctx;
     const out = [];
     const add = (tone, icon, html) => out.push({ tone, icon, html });
     const b = (t) => `<b>${escapeHtml(t)}</b>`;
     const plabel = { month: "mês", semester: "semestre", year: "ano" }[period];
     const prevLabel = { month: "ao mês anterior", semester: "ao semestre anterior", year: "ao ano anterior" }[period];
-    // Em semestre/ano, compara médias mensais (os períodos podem ter quantidades diferentes de meses)
+    // Em semestre/ano, compara médias mensais (os períodos podem ter quantidades diferentes de meses),
+    // sem contar o mês em andamento, que ainda está incompleto.
     const byMonth = period !== "month";
-    const nC = byMonth ? Math.max(months.length, 1) : 1, nP = byMonth ? Math.max(prevMonths.length, 1) : 1;
+    const nC = byMonth ? Math.max(avgMonths.length, 1) : 1, nP = byMonth ? Math.max(prevMonths.length, 1) : 1;
+    const aout = byMonth ? total(avgMonths, "expense") / nC : tout, ain = byMonth ? total(avgMonths, "income") / nC : tin;
     const avgTxt = byMonth ? "A média mensal de gastos" : "Os gastos";
+    const skipTxt = skipped ? " (sem contar o mês em andamento)" : "";
+    if (partial) add("info", "⏳", `${b("Mês em andamento")}: os valores ainda vão mudar, e as comparações com o mês anterior são parciais.`);
 
     if (mode !== "income" && tout > 0) {
       if (tin > 0) {
@@ -305,11 +322,11 @@
         const t3 = compOut.slice(0, 3).reduce((s, i) => s + i.value, 0);
         add("info", "≡", `As 3 maiores tabelas (${compOut.slice(0, 3).map(i => escapeHtml(i.label)).join(", ")}) somam ${b(fmtPct(pct(t3, tout)))} dos gastos.`);
       }
-      const d = prevMonths.length ? delta(tout / nC, ptout / nP) : null;
-      if (d != null && Math.abs(d) < 0.5) add("info", "=", `${avgTxt} ${byMonth ? "ficou estável" : "ficaram estáveis"} em relação ${prevLabel}.`);
-      else if (d != null) add(d > 5 ? "warn" : d < -5 ? "good" : "info", d > 0 ? "↑" : "↓", `${avgTxt} ${d >= 0 ? (byMonth ? "subiu" : "subiram") : (byMonth ? "caiu" : "caíram")} ${b(fmtPct(Math.abs(d)))} em relação ${prevLabel} (${api.fmt(ptout / nP)} → ${api.fmt(tout / nC)}${byMonth ? " por mês" : ""}).`);
+      const d = prevMonths.length ? delta(aout, ptout / nP) : null;
+      if (d != null && Math.abs(d) < 0.5) add("info", "=", `${avgTxt} ${byMonth ? "ficou estável" : "ficaram estáveis"} em relação ${prevLabel}${skipTxt}.`);
+      else if (d != null) add(d > 5 ? "warn" : d < -5 ? "good" : "info", d > 0 ? "↑" : "↓", `${avgTxt} ${d >= 0 ? (byMonth ? "subiu" : "subiram") : (byMonth ? "caiu" : "caíram")} ${b(fmtPct(Math.abs(d)))} em relação ${prevLabel}${partial ? " até agora" : ""} (${api.fmt(ptout / nP)} → ${api.fmt(aout)}${byMonth ? " por mês" : ""})${skipTxt}.`);
       if (prevMonths.length) {
-        const cur = sumBy(months, "expense"), prev = sumBy(prevMonths, "expense");
+        const cur = sumBy(byMonth ? avgMonths : months, "expense"), prev = sumBy(prevMonths, "expense");
         const changes = [...new Set([...cur.keys(), ...prev.keys()])].map(id => ({ id, d: (cur.get(id) || 0) / nC - (prev.get(id) || 0) / nP })).filter(c => Math.abs(c.d) >= 0.01);
         changes.sort((a, b2) => b2.d - a.d);
         const up = changes[0], down = changes[changes.length - 1];
@@ -327,7 +344,7 @@
         const p = pct(top.value, tin);
         add(p >= 85 && compIn.length > 1 ? "warn" : "info", "★", `${b(top.label)} é a principal entrada: ${b(fmtPct(p))} de tudo que entrou${p >= 85 ? ", quase toda a renda depende dela" : ""}.`);
       }
-      const d = prevMonths.length ? delta(tin / nC, ptin / nP) : null;
+      const d = prevMonths.length ? delta(ain, ptin / nP) : null;
       if (d != null && Math.abs(d) < 0.5) add("info", "=", `${byMonth ? "A média mensal de entradas ficou estável" : "As entradas ficaram estáveis"} em relação ${prevLabel}.`);
       else if (d != null) add(d < -5 ? "warn" : d > 5 ? "good" : "info", d >= 0 ? "↑" : "↓", `${byMonth ? "A média mensal de entradas" : "As entradas"} ${d >= 0 ? (byMonth ? "aumentou" : "aumentaram") : (byMonth ? "diminuiu" : "diminuíram")} ${b(fmtPct(Math.abs(d)))} em relação ${prevLabel}.`);
     }
@@ -338,16 +355,17 @@
       add(tone, rate >= 0 ? "✓" : "!", `Sobrou ${b(api.fmt(tin - tout))}: uma taxa de economia ${word} de ${b(fmtPct(rate))}.`);
     }
 
-    if (period !== "month" && months.length > 1) {
-      const per = months.map(m => ({ m, out: total([m], "expense"), in: total([m], "income") }));
+    if (period !== "month" && avgMonths.length > 1) {
+      const per = avgMonths.map(m => ({ m, out: total([m], "expense"), in: total([m], "income") }));
       if (mode !== "income") {
-        add("info", "∅", `Média de ${b(api.fmt(tout / months.length))} de gastos por mês, em ${months.length} meses registrados.`);
+        add("info", "∅", `Média de ${b(api.fmt(aout))} de gastos por mês, em ${avgMonths.length} meses registrados${skipTxt}.`);
         const hi = per.reduce((a, c) => c.out > a.out ? c : a), lo = per.reduce((a, c) => c.out < a.out ? c : a);
         if (hi.out > 0 && hi.m !== lo.m) add("info", "▲", `Mês mais caro: ${b(api.monthLabel(hi.m))} (${api.fmt(hi.out)}). Mais econômico: ${b(api.monthLabel(lo.m))} (${api.fmt(lo.out)}).`);
       }
       if (mode === "all") {
-        const red = per.filter(p => p.in > 0 && p.out > p.in).length;
-        add(red ? "warn" : "good", red ? "!" : "✓", red ? `${b(String(red))} ${red === 1 ? "mês fechou" : "meses fecharam"} no vermelho neste ${plabel}.` : `Nenhum mês fechou no vermelho neste ${plabel}.`);
+        // gastou mais do que entrou, mesmo que nenhuma entrada tenha sido registrada no mês
+        const red = per.filter(p => p.out > p.in).length;
+        add(red ? "warn" : "good", red ? "!" : "✓", red ? `${b(String(red))} ${red === 1 ? "mês fechou" : "meses fecharam"} no vermelho neste ${plabel}${skipTxt}.` : `Nenhum mês fechou no vermelho neste ${plabel}${skipTxt}.`);
       }
     }
     if (!out.length) add("info", "i", "Registre entradas e gastos neste período para ver as análises.");
@@ -382,6 +400,14 @@
     const tin = total(months, "income"), tout = total(months, "expense");
     const ptin = total(prevMonths, "income"), ptout = total(prevMonths, "expense");
     const compOut = compItems(months, "expense"), compIn = compItems(months, "income");
+    // Mês em andamento (o mês atual do calendário): ainda incompleto.
+    const curId = api.currentMonthId();
+    const partial = cs.period === "month" && cs.key === curId;
+    const complete = months.filter(m => m !== curId);
+    const avgMonths = cs.period !== "month" && complete.length ? complete : months;   // médias só com meses completos
+    const skipped = avgMonths.length < months.length;
+    // mês mais recente do período visto: ao trocar Mês/Semestre/Ano, o período escolhido continua o mesmo
+    const anchor = cs.period === "month" ? cs.key : (months[months.length - 1] || api.state.selected || ids[ids.length - 1]);
 
     // Filtros (uma linha acima dos gráficos)
     const keySel = el("select", { id: "cKey", "aria-label": "Período", onchange: (e) => update({ key: e.target.value }) },
@@ -389,7 +415,7 @@
     keySel.value = cs.key;
     const filters = el("div", { class: "cfilters" },
       el("div", { class: "cfield" }, el("span", { class: "clab" }, "Período"),
-        seg("Período", cs.period, [["month", "Mês"], ["semester", "Semestre"], ["year", "Ano"]], (v) => update({ period: v, key: periodOf(cs.key.length === 7 ? cs.key : (api.state.selected || ids[ids.length - 1]), v) })),
+        seg("Período", cs.period, [["month", "Mês"], ["semester", "Semestre"], ["year", "Ano"]], (v) => update({ period: v, key: periodOf(anchor, v) })),
         keySel),
       el("div", { class: "cfield" }, el("span", { class: "clab" }, "Dados"),
         seg("Dados", mode, [["expense", "Gastos"], ["income", "Entradas"], ["all", "Geral"]], (v) => update({ data: v }))));
@@ -404,16 +430,17 @@
       return el("div", { class: `kpi ${tone || ""}` }, el("span", { class: "klab" }, label), el("span", { class: "kval num" }, value), el("span", { class: "ksub" }, dEl, sub ? el("span", {}, sub) : null));
     };
     const byMonth = cs.period !== "month";
-    const nC = byMonth ? Math.max(months.length, 1) : 1, nP = byMonth ? Math.max(prevMonths.length, 1) : 1;
-    const vsTxt = prevMonths.length ? `${byMonth ? "média/mês " : ""}vs. ${periodLabel(pKey, cs.period).replace(/^Ano de /, "")}` : "sem período anterior";
-    const saldo = tin - tout, psaldo = ptin - ptout;
+    const nC = byMonth ? Math.max(avgMonths.length, 1) : 1, nP = byMonth ? Math.max(prevMonths.length, 1) : 1;
+    const ain = byMonth ? total(avgMonths, "income") / nC : tin, aout = byMonth ? total(avgMonths, "expense") / nC : tout;
+    const vsTxt = prevMonths.length ? `${partial ? "parcial " : ""}${byMonth ? "média/mês " : ""}vs. ${periodLabel(pKey, cs.period).replace(/^Ano de /, "")}` : "sem período anterior";
+    const saldo = api.sumMoney([tin, -tout]), psaldo = api.sumMoney([ptin, -ptout]);
     const kpis = el("div", { class: "kpis" },
-      kpi("Entradas", api.fmt(tin), vsTxt, "in", prevMonths.length ? delta(tin / nC, ptin / nP) : null, true),
-      kpi("Gastos", api.fmt(tout), vsTxt, "out", prevMonths.length ? delta(tout / nC, ptout / nP) : null, false),
-      kpi("Saldo", api.fmt(saldo), prevMonths.length ? `antes: ${api.fmt(psaldo)}` : "", saldo < 0 ? "neg" : ""),
+      kpi("Entradas", api.fmt(tin), vsTxt, "in", prevMonths.length ? delta(ain, ptin / nP) : null, true),
+      kpi("Gastos", api.fmt(tout), vsTxt, "out", prevMonths.length ? delta(aout, ptout / nP) : null, false),
+      kpi("Saldo", api.fmt(saldo), partial ? "mês em andamento" : prevMonths.length ? `antes: ${api.fmt(psaldo)}` : "", saldo < 0 ? "neg" : ""),
       cs.period === "month"
         ? kpi("Renda gasta", tin > 0 ? fmtPct(pct(tout, tin)) : "–", tin > 0 ? `${fmtPct(Math.max(0, pct(saldo, tin)))} economizado` : "sem entradas", "")
-        : kpi("Média mensal de gastos", api.fmt(months.length ? tout / months.length : 0), `${months.length} ${months.length === 1 ? "mês" : "meses"} com registro`, ""));
+        : kpi("Média mensal de gastos", api.fmt(aout), skipped ? `${avgMonths.length} ${avgMonths.length === 1 ? "mês completo" : "meses completos"}, sem o atual` : `${months.length} ${months.length === 1 ? "mês" : "meses"} com registro`, ""));
 
     // Composição
     let items, base, compTitle, compSub;
@@ -429,7 +456,7 @@
       ? el("p", { class: "cempty" }, mode === "income" ? "Nenhuma entrada neste período." : "Nenhum gasto neste período.")
       : cs.comp === "bars" ? hbars(items, base)
       : cs.comp === "columns" ? el("div", {}, columns(items, base), legendList(items, base))
-      : el("div", { class: "donutwrap" }, donut(items, api.fmt(mode === "income" ? tin : mode === "expense" ? tout : tin || tout), mode === "income" ? "recebido" : mode === "expense" ? "gasto" : "de entradas"), legendList(items, base));
+      : el("div", { class: "donutwrap" }, donut(items, api.fmt(mode === "income" ? tin : mode === "expense" ? tout : tin || tout), mode === "income" ? "recebido" : mode === "expense" || !tin ? "gasto" : "de entradas"), legendList(items, base));
     const compCard = el("section", { class: "ccard comp" },
       el("header", { class: "chead" },
         el("div", {}, el("h3", {}, compTitle), el("p", {}, compSub)),
@@ -437,13 +464,16 @@
       compBody);
 
     // Análises
-    const ins = insights({ months, prevMonths, mode, period: cs.period, tin, tout, ptin, ptout, compOut, compIn });
+    const ins = insights({ months, avgMonths, prevMonths, mode, period: cs.period, tin, tout, ptin, ptout, compOut, compIn, partial, skipped });
     const insCard = el("section", { class: "ccard ins" },
       el("header", { class: "chead" }, el("div", {}, el("h3", {}, `Análise do ${{ month: "mês", semester: "semestre", year: "ano" }[cs.period]}`), el("p", {}, periodLabel(cs.key, cs.period)))),
       el("ul", { class: "inslist" }, ...ins.map(i => { const li = el("li", { class: `t-${i.tone}` }, el("span", { class: "ico", "aria-hidden": "true" }, i.icon)); const sp = el("span", {}); sp.innerHTML = i.html; li.append(sp); return li; })));
 
     // Evolução: no mês, mostra os 6 meses até ele; no semestre/ano, os meses do período
-    const evoMonths = cs.period === "month" ? ids.filter(id => id <= cs.key).slice(-6) : months;
+    // (meses do calendário: um mês sem registro aparece como zero, sem "encolher" o eixo)
+    const evoMonths = cs.period === "month"
+      ? [-5, -4, -3, -2, -1, 0].map(n => api.shiftMonth(cs.key, n)).filter(id => id >= ids[0])
+      : months;
     const series = evoSeries(evoMonths, mode).filter(s => s.values.some(v => v > 0));
     const evoCard = el("section", { class: "ccard evo-card" },
       el("header", { class: "chead" },
@@ -457,16 +487,18 @@
     const rows = [];
     const addRows = (kind) => {
       const cur = sumBy(months, kind), prev = sumBy(prevMonths, kind), tot = kind === "income" ? tin : tout;
-      [...new Set([...cur.keys(), ...prev.keys()])].map(id => ({ id, v: cur.get(id) || 0, p: prev.get(id) || 0 }))
+      const avg = byMonth ? sumBy(avgMonths, kind) : cur;   // média só com meses completos
+      [...new Set([...cur.keys(), ...prev.keys()])].map(id => ({ id, v: cur.get(id) || 0, a: (avg.get(id) || 0) / nC, p: prev.get(id) || 0 }))
         .sort((a, b2) => b2.v - a.v)
         .forEach(r => {
-          const d = delta(r.v / nC, r.p / nP);
+          const d = delta(r.a, r.p / nP);
           rows.push(el("tr", {},
             el("td", {}, el("span", { class: "tname" }, el("i", { style: `background:${ctxColor(kind, r.id)}` }), ctxName(r.id))),
             mode === "all" ? el("td", {}, kind === "income" ? "Entrada" : "Gasto") : null,
             el("td", { class: "num r" }, api.fmtPlain(r.v)),
+            byMonth ? el("td", { class: "num r" }, api.fmtPlain(r.a)) : null,
             el("td", { class: "num r" }, fmtPct(pct(r.v, tot), 1)),
-            el("td", { class: "num r muted" }, prevMonths.length ? api.fmtPlain(r.p) : "–"),
+            el("td", { class: "num r muted" }, prevMonths.length ? api.fmtPlain(r.p / nP) : "–"),
             el("td", { class: `num r ${d == null ? "muted" : (kind === "expense" ? d > 0 : d < 0) ? "neg" : "pos"}` }, d == null ? (r.p === 0 && r.v > 0 && prevMonths.length ? "novo" : "–") : `${d >= 0 ? "+" : ""}${fmtPct(d)}`)));
         });
     };
@@ -475,7 +507,7 @@
     const tableCard = el("section", { class: "ccard" },
       el("header", { class: "chead" }, el("div", {}, el("h3", {}, "Tabela"), el("p", {}, `Valores por tabela, comparados com ${prevMonths.length ? periodLabel(pKey, cs.period).toLowerCase() : "o período anterior (sem registros)"}`))),
       rows.length ? el("div", { class: "scrollx" }, el("table", { class: "ctable" },
-        el("thead", {}, el("tr", {}, el("th", {}, "Tabela"), mode === "all" ? el("th", {}, "Tipo") : null, el("th", { class: "r" }, "Valor (R$)"), el("th", { class: "r" }, "% do tipo"), el("th", { class: "r" }, "Anterior"), el("th", { class: "r" }, byMonth ? "Variação (média/mês)" : "Variação"))),
+        el("thead", {}, el("tr", {}, el("th", {}, "Tabela"), mode === "all" ? el("th", {}, "Tipo") : null, el("th", { class: "r" }, "Valor (R$)"), byMonth ? el("th", { class: "r" }, skipped ? "Média/mês (completos)" : "Média/mês") : null, el("th", { class: "r" }, "% do tipo"), el("th", { class: "r" }, byMonth ? "Anterior (média/mês)" : "Anterior"), el("th", { class: "r" }, byMonth ? "Variação (média/mês)" : "Variação"))),
         el("tbody", {}, ...rows))) : el("p", { class: "cempty" }, "Sem registros neste período."));
 
     const empty = !months.length;
