@@ -157,12 +157,14 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
 
 /* ---------- Cartão-tabela ---------- */
 .card { background: color-mix(in srgb, var(--k) var(--row-k), var(--surface)); border: 1px solid color-mix(in srgb, var(--k) var(--card-k), var(--line)); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: grid; min-width: 0; }
-.card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 6px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
+.card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 6px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
 .card-title { font-weight: 600; font-size: 15.5px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-title i { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); flex: none; }
 .card-total { font-family: var(--f-num); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); white-space: nowrap; }
 .card-head .iconbtn { color: var(--head-ink); opacity: .85; }
+.card-head .iconbtn.trash { margin-right: -6px; opacity: .6; }
+.card-head .iconbtn .ico { display: grid; place-items: center; }
 .card-head .iconbtn:hover { opacity: 1; background: color-mix(in srgb, var(--head-ink) 18%, transparent); color: var(--head-ink); }
 .iconbtn { width: 30px; height: 30px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; font-size: 17px; line-height: 1; flex: none; }
 .iconbtn:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
@@ -692,7 +694,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name),
         isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null),
       el("span", { class: "card-total" }, fmt(sum)),
-      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; render(); } }, "⋯"));
+      el("button", { class: "iconbtn trash", "aria-label": `Excluir a tabela ${c.name}`, title: "Excluir tabela", onclick: () => deleteCtx(kind, c.id) }, trashIcon()),
+      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; render(); } }, "⋯"));
 
     const rows = items.length
       ? el("ul", { class: "rows" }, ...items.map(e => row(e)))
@@ -777,10 +780,66 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { c.repeat = !isRepeat(c); store.saveSettings(); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
       el("div", { class: "menu-actions" },
-        used > 0
-          ? el("p", { class: "warn" }, `Para excluir, remova antes os ${countLabel(used, "registro", "registros")} desta tabela (em todos os meses).`)
-          : el("button", { class: "btn danger", onclick: () => { state.settings[kind] = ctxs(kind).filter(x => x !== c); state.menu = null; store.saveSettings(); render(); } }, "Excluir tabela"),
+        el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
         el("button", { class: "btn solid", onclick: save }, "Concluir")));
+  }
+
+  function trashIcon() {
+    const s = el("span", { class: "ico", "aria-hidden": "true" });
+    s.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5.5M14 11v5.5"/></svg>';
+    return s;
+  }
+
+  // Exclui a tabela e todos os registros dela, em todos os meses (com confirmação e desfazer).
+  async function deleteCtx(kind, id) {
+    const c0 = ctxs(kind).find(x => x.id === id);
+    if (!c0) return;
+    const hits = monthIds().map(m => [m, state.months[m].entries.filter(e => e.ctx === id)]).filter(([, es]) => es.length);
+    const n = hits.reduce((s, [, es]) => s + es.length, 0);
+    const total = hits.reduce((s, [, es]) => s + es.reduce((t, e) => t + e.value, 0), 0);
+    const metas = kind === "expense" && plainName(c0.name).trim() === "metas" && (state.goals || []).length > 0;
+    const ok = await confirmDialog({
+      title: `Excluir a tabela "${c0.name}"?`,
+      text: n
+        ? `A tabela sai de todos os meses junto com ${n === 1 ? "o registro" : `os ${n} registros`} dela, inclusive de meses diferentes do que está aberto.` +
+          (metas ? " Os registros que contam para as suas metas também serão apagados, e o progresso delas vai diminuir." : "")
+        : "A tabela não tem registros em nenhum mês e sai da lista.",
+      details: [["Registros", String(n)], ["Meses afetados", String(hits.length)], [kind === "income" ? "Total de entradas" : "Total de saídas", fmt(total)]],
+      ok: "Excluir tabela",
+    });
+    if (!ok) return;
+    const list = ctxs(kind), pos = list.findIndex(x => x.id === id);
+    if (pos < 0) return;                       // já excluída em outro aparelho enquanto o popup estava aberto
+    const c = list[pos];
+    const removed = {};                         // mês -> registros apagados, com a posição original
+    for (const m of monthIds()) {
+      const es = state.months[m].entries;
+      if (!es.some(e => e.ctx === id)) continue;
+      removed[m] = es.map((e, i) => [i, e]).filter(([, e]) => e.ctx === id);
+      state.months[m].entries = es.filter(e => e.ctx !== id);
+      store.saveMonth(m);
+    }
+    state.settings[kind] = list.filter(x => x.id !== id);
+    delete state.drafts[id];
+    if (state.menu === id) state.menu = null;
+    if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
+    store.saveSettings();
+    render();
+    undo = () => {
+      if (!ctxs(kind).some(x => x.id === id)) {
+        const l = ctxs(kind).slice(); l.splice(Math.min(pos, l.length), 0, c); state.settings[kind] = l;
+        store.saveSettings();
+      }
+      for (const [m, items] of Object.entries(removed)) {
+        if (!state.months[m]) continue;          // o mês foi excluído depois
+        const es = state.months[m].entries.slice();
+        for (const [i, e] of items) if (!es.some(x => x.id === e.id)) es.splice(Math.min(i, es.length), 0, e);
+        state.months[m].entries = es;
+        store.saveMonth(m);
+      }
+      render();
+    };
+    showToast(`Tabela "${c.name}" excluída` + (n ? ` com ${countLabel(n, "registro", "registros")}` : ""), 10000);
   }
 
   function newCard(kind) {
