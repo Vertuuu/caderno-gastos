@@ -50,6 +50,9 @@ function normalize(raw, problems) {
     }
   } else if (d.months !== undefined) problems.push("meses em formato inválido");
   out.goals = Array.isArray(d.goals) ? d.goals.filter(g => isObj(g) && typeof g.id === "string") : [];
+  // revisão da última mudança de cada documento (tabelas, metas e cada mês), para detectar conflitos
+  out.docRev = {};
+  if (isObj(d.docRev)) for (const [k, v] of Object.entries(d.docRev)) if (Number.isFinite(v)) out.docRev[k] = v;
   return out;
 }
 
@@ -259,6 +262,25 @@ function readBody(req) {
   });
 }
 
+// Conferência de versão: o aparelho diz em que revisão do documento se baseou (baseRev).
+// Se outro aparelho mudou o documento depois disso, responde 409 com a versão atual para o aparelho mesclar.
+// Sem baseRev (página antiga aberta em algum aparelho) aceita como antes.
+function conflict(res, key, baseRev, current) {
+  if (baseRev === undefined) return false;
+  const cur = data.docRev[key] || 0;
+  if (baseRev === cur) return false;
+  send(res, 409, { conflict: true, rev: data.rev, docRev: cur, doc: current() });
+  return true;
+}
+// Registra a mudança: nova revisão global, revisão dos documentos alterados e gravação.
+function commit(keys) {
+  const prevRev = data.rev;
+  persist();
+  const docRev = {};
+  for (const k of keys) docRev[k] = data.docRev[k] = data.rev;
+  return keys.length === 1 ? { rev: data.rev, prevRev, docRev: docRev[keys[0]] } : { rev: data.rev, prevRev, docRev };
+}
+
 // Enquanto o disco estiver recusando gravações, não aceita mudanças (para a tela mostrar o erro).
 function diskBlocked(res) {
   if (!diskError) return false;
@@ -277,42 +299,61 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, data);
     }
     if (p === "/api/settings" && req.method === "PUT") {
-      const b = cleanSettings(await readBody(req));
+      const raw = await readBody(req);
+      const b = cleanSettings(raw);
       if (!b) return send(res, 400, { error: "Contextos inválidos" });
-      if (diskBlocked(res)) return;
+      if (conflict(res, "settings", raw.baseRev, () => data.settings) || diskBlocked(res)) return;
       const ids = new Set([...b.expense, ...b.income].map(c => c.id));
       if ([...data.settings.expense, ...data.settings.income].some(c => !ids.has(c.id))) safetyBackup("tabela");
       data.settings = b;
-      persist();
-      return send(res, 200, { rev: data.rev });
+      return send(res, 200, commit(["settings"]));
     }
     if (p === "/api/goals" && req.method === "PUT") {
-      const goals = cleanGoals(await readBody(req));
+      const raw = await readBody(req);
+      const goals = cleanGoals(raw);
       if (!goals) return send(res, 400, { error: "Metas inválidas" });
-      if (diskBlocked(res)) return;
+      if (conflict(res, "goals", raw.baseRev, () => ({ goals: data.goals })) || diskBlocked(res)) return;
       data.goals = goals;
-      persist();
-      return send(res, 200, { rev: data.rev });
+      return send(res, 200, commit(["goals"]));
     }
     const m = p.match(/^\/api\/months\/([^/]+)$/);
     if (m && !MONTH_RE.test(m[1])) return send(res, 404, { error: "Mês inválido" });
     if (m && req.method === "PUT") {
-      const b = cleanMonth(await readBody(req));
+      const raw = await readBody(req);
+      const b = cleanMonth(raw);
       if (!b) return send(res, 400, { error: "Registros inválidos" });
-      if (diskBlocked(res)) return;
+      const key = "m:" + m[1];
+      if (conflict(res, key, raw.baseRev, () => data.months[m[1]] || null) || diskBlocked(res)) return;
       const before = data.months[m[1]];
       if (before && before.entries.length > 0 && b.entries.length === 0) safetyBackup("limpar-mes");
       data.months[m[1]] = b;
-      persist();
-      return send(res, 200, { rev: data.rev });
+      return send(res, 200, commit([key]));
     }
     if (m && req.method === "DELETE") {
-      if (!data.months[m[1]]) return send(res, 404, { error: "Mês não encontrado" });
+      if (!data.months[m[1]]) return send(res, 404, { error: "Mês não encontrado", rev: data.rev, docRev: data.docRev["m:" + m[1]] || 0 });
       if (diskBlocked(res)) return;
       safetyBackup("excluir-mes");
       delete data.months[m[1]];
-      persist();
-      return send(res, 200, { rev: data.rev });
+      return send(res, 200, commit(["m:" + m[1]]));
+    }
+    // Exclui uma tabela e todos os registros dela, em todos os meses, numa única mudança
+    const cx = p.match(/^\/api\/contexts\/(expense|income)\/([^/]{1,40})$/);
+    if (cx && req.method === "DELETE") {
+      const [, kind, id] = cx;
+      if (diskBlocked(res)) return;
+      const keys = [];
+      const has = data.settings[kind].some(c => c.id === id);
+      const touched = Object.keys(data.months).filter(mid => data.months[mid].entries.some(e => e.ctx === id));
+      if (has || touched.length) {
+        safetyBackup("tabela");
+        if (has) { data.settings = { ...data.settings, [kind]: data.settings[kind].filter(c => c.id !== id) }; keys.push("settings"); }
+        for (const mid of touched) { data.months[mid] = { entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
+      }
+      const out = keys.length ? commit(keys) : { rev: data.rev, prevRev: data.rev, docRev: {} };
+      out.docs = {};
+      if (has) out.docs.settings = data.settings;
+      for (const mid of touched) out.docs["m:" + mid] = data.months[mid];
+      return send(res, 200, out);
     }
     // Desligamento pedido pelo app de controle (só aceito do próprio computador)
     if (p === "/api/shutdown" && req.method === "POST") {
