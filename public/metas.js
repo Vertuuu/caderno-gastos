@@ -4,6 +4,7 @@
 //   basis "months"  -> meses informados, gasto mensal calculado (valor ÷ meses)
 (() => {
   const KCOUNT = 10;
+  const MAX_MONTHS = 1200;   // mesmo limite do servidor
   const MONTHS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
   let api = null;
   let edit = null;        // { id, field }
@@ -12,6 +13,7 @@
   let lastTyped = null;   // "monthly" | "months": qual dos dois o usuário digitou por último
   let formErr = "";
   let focusAdd = false;
+  let notice = null;      // { id, text }: aviso mostrado embaixo do "Guardado" de uma meta
 
   const $ = (id) => document.getElementById(id);
   const el = (...a) => api.el(...a);
@@ -20,7 +22,7 @@
   const isActive = (g) => g.active !== false; // metas antigas, sem o campo, contam como ativas
 
   function parseInt0(s) {
-    s = String(s || "").trim().replace(/\s*mes(es)?$/i, "");
+    s = String(s || "").trim().replace(/\s*m[eê]s(es)?$/i, "");   // aceita "12", "1 mês", "2 meses"
     if (!/^\d+$/.test(s)) return NaN;
     return Number(s);
   }
@@ -51,8 +53,7 @@
   const fromEntries = (g) => round2(contributions(g).reduce((s, x) => s + x.entry.value, 0));
   // Mês que recebe a parcela: o mês atual do calendário; se ele não existir, é criado.
   function targetMonth() {
-    const d = new Date();
-    const id = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const id = api.currentMonthId();
     if (!api.state.months[id]) { api.state.months[id] = { entries: [] }; }
     return id;
   }
@@ -95,7 +96,11 @@
       months = remaining <= 0 ? 0 : Math.ceil(remaining / g.monthly - 1e-9);
     }
     const left = months;
-    const d = new Date(); d.setMonth(d.getMonth() + left);
+    // Previsão = mês da última parcela. Se a parcela deste mês ainda não foi lançada, este mês já conta.
+    // (Date com dia 1: somar meses a 31/out não pula para dezembro.)
+    const paidNow = contrib.some(x => x.month === api.currentMonthId());
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() + Math.max(left - (paidNow ? 0 : 1), 0), 1);
     // Excedente: com gasto mensal fixo, a última parcela passa do que falta (ex.: 800 com 250/mês = 4 × 250 = 1000, sobram 200)
     const surplus = g.basis === "monthly" && remaining > 0 ? round2(months * g.monthly - remaining) : 0;
     const n = (k) => `${k} ${k === 1 ? "mês" : "meses"}`;
@@ -140,10 +145,10 @@
     else if (goals().some(g => norm(g.name) === norm(name))) formErr = `Já existe uma meta "${name}". Use outro nome: os registros da tabela Metas são ligados pelo nome.`;
     else if (!(value > 0)) formErr = "Informe o valor da meta, por exemplo 5.000,00.";
     else if (!hasMonthly && !hasMonths) formErr = "Preencha o gasto mensal ou os meses para atingir.";
-    else if (hasMonths && !(months > 0) && (!hasMonthly || lastTyped === "months")) formErr = "Meses para atingir deve ser um número inteiro, como 12.";
+    else if (hasMonths && !(months > 0 && months <= MAX_MONTHS) && (!hasMonthly || lastTyped === "months")) formErr = `Meses para atingir deve ser um número inteiro de 1 a ${MAX_MONTHS}, como 12.`;
     else if (hasMonthly && !(monthly > 0) && (!hasMonths || lastTyped !== "months")) formErr = "Gasto mensal inválido. Use por exemplo 200,00.";
     if (formErr) { render(); return; }
-    const useMonths = hasMonths && months > 0 && (!hasMonthly || lastTyped === "months" || !(monthly > 0));
+    const useMonths = hasMonths && months > 0 && months <= MAX_MONTHS && (!hasMonthly || lastTyped === "months" || !(monthly > 0));
     const used = new Set(goals().map(g => g.color));
     const color = [...Array(KCOUNT).keys()].find(i => !used.has(i)) ?? goals().length % KCOUNT;
     goals().push({
@@ -173,9 +178,13 @@
     else if (field === "value") { const v = api.parseMoney(raw); if (v > 0) g.value = round2(v); }
     else if (field === "monthly") { const v = api.parseMoney(raw); if (v > 0) { g.basis = "monthly"; g.monthly = round2(v); delete g.months; } }
     // o usuário digita os meses que AINDA faltam; o prazo total soma os meses que já tiveram registro
-    else if (field === "months") { const v = parseInt0(raw); if (v > 0 && v <= 1000) { const used = derive(g).paidMonths; g.basis = "months"; g.months = v + used; delete g.monthly; } }
+    else if (field === "months") { const v = parseInt0(raw), used = derive(g).paidMonths; if (v > 0 && v + used <= MAX_MONTHS) { g.basis = "months"; g.months = v + used; delete g.monthly; } }
     // "Guardado" = valor informado à mão + registros da tabela Metas; editar ajusta só a parte manual
-    else if (field === "saved") { const v = raw.trim() === "" ? 0 : api.parseMoney(raw); if (v >= 0) g.saved = round2(Math.max(v - fromEntries(g), 0)); }
+    else if (field === "saved") {
+      const v = raw.trim() === "" ? 0 : api.parseMoney(raw), linked = fromEntries(g);
+      if (v >= 0 && v < linked - 0.005) notice = { id: g.id, text: `Mínimo ${api.fmt(linked)}: é o que já está na tabela Metas.` };
+      else if (v >= 0) g.saved = round2(v - linked);
+    }
     edit = null;
     save();
   }
@@ -194,7 +203,7 @@
       return el("td", { class: opts.cls }, inp);
     }
     return el("td", { class: opts.cls },
-      el("button", { class: `gcell ${opts.calc ? "calc" : ""}`, title: opts.title || "Clique para editar", onclick: () => { edit = { id: g.id, field }; colorOpen = null; render(); } },
+      el("button", { class: `gcell ${opts.calc ? "calc" : ""}`, title: opts.title || "Clique para editar", onclick: () => { edit = { id: g.id, field }; colorOpen = null; notice = null; render(); } },
         display, opts.calc ? el("span", { class: "calctag" }, "calculado") : null));
   }
 
@@ -218,7 +227,8 @@
         d.surplus > 0 ? el("small", { class: "gsurplus" }, `sobram ${api.fmt(d.surplus)}`) : null), { cls: "num r", calc: g.basis === "monthly", title: g.basis === "monthly" ? `${d.formula}\nClique para definir os meses você mesmo` : "Clique para editar", label: "Meses para atingir" }),
       cell(g, "saved", el("span", { class: "gstack" }, api.fmtPlain(d.saved),
         d.over > 0 ? el("small", { class: "gsurplus" }, `${api.fmt(d.over)} de excedente`) : null,
-        d.linked > 0 ? el("small", { class: "glinked" }, `${contributions(g).length} na tabela Metas`) : null), {
+        d.linked > 0 ? el("small", { class: "glinked" }, `${contributions(g).length} na tabela Metas`) : null,
+        notice && notice.id === g.id ? el("small", { class: "gsurplus", role: "alert" }, notice.text) : null), {
         cls: "num r", label: "Guardado",
         title: `${api.fmt(d.linked)} em registros da tabela Metas (nome "${g.name}")` + (d.manual > 0 ? `\n+ ${api.fmt(d.manual)} informado à mão` : "") + "\nClique para ajustar o valor informado à mão",
       }),
@@ -236,7 +246,9 @@
     const d = derive(g);
     const ok = await api.confirmDialog({
       title: `Excluir a meta "${g.name}"?`,
-      text: "A meta sai da tabela junto com o valor guardado registrado nela.",
+      text: d.linked > 0
+        ? `A meta sai desta lista. ${contributions(g).length === 1 ? "O registro dela na tabela Metas" : `Os ${contributions(g).length} registros dela na tabela Metas`} (${api.fmt(d.linked)}) ${contributions(g).length === 1 ? "continua" : "continuam"} nos lançamentos.`
+        : "A meta sai desta lista.",
       details: [["Valor", api.fmt(g.value)], ["Guardado", api.fmt(d.saved)], ["Progresso", `${Math.round(d.pct)}%`]],
       ok: "Excluir meta",
     });
@@ -273,7 +285,7 @@
       el("div", { class: "kpi" }, el("span", { class: "klab" }, "Total das metas"), el("span", { class: "kval num" }, api.fmt(totalValue)), el("span", { class: "ksub" }, `${counted.length} ${counted.length === 1 ? "meta ativa" : "metas ativas"}${doneCount ? `, ${doneCount} atingida${doneCount > 1 ? "s" : ""}` : ""}${inactiveTxt}`)),
       el("div", { class: "kpi in" }, el("span", { class: "klab" }, "Já guardado"), el("span", { class: "kval num" }, api.fmt(totalSaved)), el("span", { class: "ksub" }, totalValue ? `${Math.round((totalSaved - totalOver) / totalValue * 100)}% do total${totalOver > 0 ? ` + ${api.fmt(totalOver)} de excedente` : ""}` : "–")),
       el("div", { class: "kpi out" }, el("span", { class: "klab" }, "Guardar por mês"), el("span", { class: "kval num" }, api.fmt(monthlyCommit)), el("span", { class: "ksub" }, `soma das metas em andamento`)),
-      el("div", { class: "kpi" }, el("span", { class: "klab" }, "Falta juntar"), el("span", { class: "kval num" }, api.fmt(Math.max(totalValue - totalSaved, 0))), el("span", { class: "ksub" }, active.length ? `${active.length} em andamento` : "nada pendente")));
+      el("div", { class: "kpi" }, el("span", { class: "klab" }, "Falta juntar"), el("span", { class: "kval num" }, api.fmt(api.sumMoney(ds.map(d => d.remaining)))), el("span", { class: "ksub" }, active.length ? `${active.length} em andamento` : "nada pendente")));
 
     // linha de inclusão
     const inName = el("input", { id: "gNewName", class: "gin", placeholder: "Ex.: PS5", maxlength: "120", value: draft.name, "aria-label": "Nome da nova meta" });
