@@ -181,6 +181,11 @@ main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
 .menu .warn { font-size: 12.5px; color: var(--spend); margin: 0; }
 .menu .toggle { justify-self: start; background: var(--surface); }
 .card-title .repeat { font-weight: 600; font-size: 13px; opacity: .8; flex: none; }
+.card.orphan { border-style: dashed; }
+.card.orphan .card-head { background: var(--sunk); color: var(--ink); border-bottom-color: var(--line); }
+.card.orphan .card-title i { background: var(--faint); }
+.card.orphan .card-total { color: var(--ink); }
+.orphan-note { margin: 0; padding: 8px 14px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--hair); }
 .drag-handle { width: 22px; height: 30px; margin-right: -4px; border: 0; border-radius: 6px; background: transparent; color: var(--head-ink); opacity: .45; font-size: 16px; line-height: 1; padding: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .drag-handle:hover { opacity: .9; background: color-mix(in srgb, var(--head-ink) 14%, transparent); }
 .card-head > span:first-child { width: 8px; }
@@ -383,6 +388,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const fmt = (n) => BRL.format(n || 0);
   const fmtPlain = (n) => (n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Soma valores em centavos inteiros (0,10 + 0,20 dá 0,30 exato, sem "-R$ 0,00")
+  const sumMoney = (vals) => { let c = 0; for (const v of vals) c += Math.round(v * 100); return c / 100; };
   const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
   const monthLabel = (id) => { const [y, m] = id.split("-").map(Number); return `${MONTHS[m - 1]} ${y}`; };
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -701,13 +708,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     raf = requestAnimationFrame(scroll);
   }
   const entries = () => (state.selected && state.months[state.selected]) ? state.months[state.selected].entries : [];
+  // Valor no formato brasileiro: 45,90 · 1.234,56 · 1234,56 · 1.500 · 1234.5 · R$ 10
   function parseMoney(s) {
-    s = String(s || "").trim().replace(/[R$\s]/g, "");
-    if (!s) return NaN;
-    if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
-    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
-    const n = Number(s);
-    return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+    s = String(s || "").trim().replace(/^R\$/i, "").replace(/\s/g, "");
+    let n;
+    if (/^\d{1,3}(\.\d{3})*,\d{1,2}$|^\d+,\d{1,2}$|^\d+,$/.test(s)) n = Number(s.replace(/\./g, "").replace(",", "."));
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) n = Number(s.replace(/\./g, ""));     // 1.500 = mil e quinhentos
+    else if (/^\d+(\.\d{1,2})?$/.test(s)) n = Number(s);                           // 1234.5
+    else return NaN;
+    return Number.isFinite(n) && n <= 1e9 ? Math.round(n * 100) / 100 : NaN;
   }
   function el(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -776,14 +785,17 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function totalsBy(kind) {
     const map = new Map();
-    entries().forEach(e => { if (e.kind === kind) map.set(e.ctx, (map.get(e.ctx) || 0) + e.value); });
+    entries().forEach(e => { if (e.kind === kind) map.set(e.ctx, (map.get(e.ctx) || 0) + Math.round(e.value * 100)); });
+    for (const [k, c] of map) map.set(k, c / 100);
     return map;
   }
+  // Registros cuja tabela não existe mais (sobras de exclusões antigas ou de conflitos entre aparelhos)
+  const orphans = (kind) => entries().filter(e => e.kind === kind && !ctxs(kind).some(c => c.id === e.ctx));
 
   function renderSummary() {
     const es = entries();
-    const tin = es.filter(e => e.kind === "income").reduce((s, e) => s + e.value, 0);
-    const tout = es.filter(e => e.kind === "expense").reduce((s, e) => s + e.value, 0);
+    const tin = sumMoney(es.filter(e => e.kind === "income").map(e => e.value));
+    const tout = sumMoney(es.filter(e => e.kind === "expense").map(e => e.value));
     const left = tin - tout;
     $("fIn").textContent = fmt(tin);
     $("fOut").textContent = fmt(tout);
@@ -809,11 +821,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const board = $(isIn ? "boardIn" : "boardOut");
     const list = ctxs(kind);
     const byCtx = totalsBy(kind);
-    const total = [...byCtx.values()].reduce((s, v) => s + v, 0);
-    const tin = [...totalsBy("income").values()].reduce((s, v) => s + v, 0);
+    const total = sumMoney(byCtx.values());
+    const tin = sumMoney(totalsBy("income").values());
     $(isIn ? "sIn" : "sOut").textContent = fmt(total);
     $(isIn ? "cIn" : "cOut").textContent = list.length ? `${list.length} ${list.length === 1 ? "tabela" : "tabelas"}` : "";
-    board.replaceChildren(...list.map(c => card(kind, c, byCtx.get(c.id) || 0, isIn ? total : (tin || total))), newCard(kind));
+    const lost = orphans(kind);
+    board.replaceChildren(...list.map(c => card(kind, c, byCtx.get(c.id) || 0, isIn ? total : (tin || total))),
+      ...(lost.length ? [orphanCard(lost)] : []), newCard(kind));
+  }
+
+  // Cartão cinza com os registros sem tabela: entram no total do mês, então precisam aparecer em algum lugar.
+  function orphanCard(items) {
+    return el("article", { class: "card orphan", style: "--k: var(--faint)", "aria-label": "Registros sem tabela" },
+      el("div", { class: "card-head" }, el("span"),
+        el("div", { class: "card-title" }, el("i"), el("span", {}, "Sem tabela")),
+        el("span", { class: "card-total" }, fmt(sumMoney(items.map(e => e.value)))), el("span"), el("span")),
+      el("p", { class: "orphan-note" }, "Registros de uma tabela que foi excluída. Edite ou remova cada um."),
+      el("ul", { class: "rows" }, ...items.map(e => row(e))));
   }
 
   function card(kind, c, sum, base) {
@@ -899,7 +923,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const name = el("input", { id: `rn-${c.id}`, type: "text", value: c.name, maxlength: "40" });
     const save = () => {
       const v = name.value.trim().replace(/\s+/g, " "), t = cur();
-      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && x.name.toLowerCase() === v.toLowerCase())) { t.name = v; store.saveSettings(); }
+      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && plainName(x.name) === plainName(v))) { t.name = v; store.saveSettings(); }
       state.menu = null; render();
     };
     name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; render(); } });
@@ -933,7 +957,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (!c0) return;
     const hits = monthIds().map(m => [m, state.months[m].entries.filter(e => e.ctx === id)]).filter(([, es]) => es.length);
     const n = hits.reduce((s, [, es]) => s + es.length, 0);
-    const total = hits.reduce((s, [, es]) => s + es.reduce((t, e) => t + e.value, 0), 0);
+    const total = sumMoney(hits.flatMap(([, es]) => es.map(e => e.value)));
     const metas = kind === "expense" && plainName(c0.name).trim() === "metas" && (state.goals || []).length > 0;
     const ok = await confirmDialog({
       title: `Excluir a tabela "${c0.name}"?`,
@@ -985,15 +1009,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const add = (name) => {
       name = name.trim().replace(/\s+/g, " ");
       if (!name) { input.focus(); return; }
-      if (ctxs(kind).some(c => c.name.toLowerCase() === name.toLowerCase())) { err.textContent = `Já existe uma tabela "${name}".`; err.hidden = false; return; }
+      const same = ctxs(kind).find(c => plainName(c.name) === plainName(name));
+      if (same) { err.textContent = `Já existe uma tabela "${same.name}".`; err.hidden = false; return; }
       const c = { id: uid(), name };
       state.settings[kind] = [...ctxs(kind), c];
       store.saveSettings();
       state.focusAdder = c.id;
       render();
     };
-    const taken = new Set(ctxs(kind).map(c => c.name.toLowerCase()));
-    const sugg = SUGGEST[kind].filter(s => !taken.has(s.toLowerCase())).slice(0, 4);
+    const taken = new Set(ctxs(kind).map(c => plainName(c.name)));
+    const sugg = SUGGEST[kind].filter(s => !taken.has(plainName(s))).slice(0, 4);
     return el("div", { class: "newcard" },
       el("span", { class: "ttl" }, isIn ? "+ Nova tabela de entradas" : "+ Nova tabela de saídas"),
       el("form", { onsubmit: (ev) => { ev.preventDefault(); add(input.value); } }, input, el("button", { class: "btn", type: "submit" }, "Criar")),
@@ -1051,8 +1076,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function monthDetails(id) {
     const es = state.months[id].entries;
-    const tin = es.filter(e => e.kind === "income").reduce((s, e) => s + e.value, 0);
-    const tout = es.filter(e => e.kind === "expense").reduce((s, e) => s + e.value, 0);
+    const tin = sumMoney(es.filter(e => e.kind === "income").map(e => e.value));
+    const tout = sumMoney(es.filter(e => e.kind === "expense").map(e => e.value));
     return [["Registros", String(es.length)], ["Entradas", fmt(tin)], ["Saídas", fmt(tout)]];
   }
 
@@ -1139,7 +1164,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("copyLabel").textContent = "Copiar itens e valores para o novo mês:";
     $("copyOpts").replaceChildren(...order.map(cid => {
       const c = findCtx(cid)[1], s = srcs.get(cid);
-      const total = s.items.reduce((t, e) => t + e.value, 0);
+      const total = sumMoney(s.items.map(e => e.value));
       return el("button", { class: "toggle", type: "button", title: `${s.items.length} ${s.items.length === 1 ? "item" : "itens"} de ${monthLabel(s.month)}`, "aria-pressed": String(state.copySel.has(cid)), onclick: () => { state.copySel.has(cid) ? state.copySel.delete(cid) : state.copySel.add(cid); renderCopy(); } },
         el("span", { class: "box" }, "✓"), `${c.name} · ${fmt(total)}`);
     }));
@@ -1190,6 +1215,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // API usada pela página de gráficos (graficos.js)
   const chartsApi = {
     state, el, fmt, fmtPlain, monthLabel, monthIds, findCtx, colorOf, ctxs, parseMoney, uid, store, confirmDialog,
+    currentMonthId, shiftMonth, sumMoney, plainName,
     setUndo(fn, text) { undo = fn; showToast(text, 10000); },
   };
   window.addEventListener("hashchange", () => { window.scrollTo({ top: 0 }); render(); });
