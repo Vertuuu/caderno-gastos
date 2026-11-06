@@ -140,7 +140,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Mover tabelas** de posição arrastando pela alça ⠿ ou pelos botões **← Antes / Depois →** no menu ⋯. A ordem vale para todos os meses.
 - **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
-- **Desfazer** por alguns segundos depois de remover, mover, excluir ou limpar.
+- **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
 
 ### Meses
 
@@ -164,6 +164,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 ### Geral
 
+- **Desfazer e Refazer** sempre à mão, no canto inferior direito (ou **Ctrl+Z** e **Ctrl+Y**): voltam qualquer ação, como lançar, editar, remover, renomear, mover, criar ou excluir tabela, mês ou meta. Cada aparelho guarda as **últimas 20 ações** enquanto a aba estiver aberta, e desfazer não apaga o que foi lançado depois em outro aparelho.
 - **Tema claro e escuro** (ou igual ao sistema), no site e no painel.
 - Funciona no celular, com layout próprio para tela pequena.
 - **Sincronização entre aparelhos** da mesma rede: o que é lançado no celular aparece no computador em poucos segundos.

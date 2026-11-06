@@ -126,7 +126,7 @@ button { cursor: pointer; }
 .small { font-size: 13px; color: var(--muted); margin: 0; }
 
 /* ---------- Resumo ---------- */
-main .inner { padding-block: 22px 72px; display: grid; gap: 30px; }
+main .inner { padding-block: 22px 96px; display: grid; gap: 30px; }
 .summary { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; display: grid; gap: 18px; }
 .figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .fig { display: grid; gap: 2px; min-width: 0; }
@@ -274,6 +274,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 }
 .toast button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 7px; padding: 4px 11px; font-weight: 600; }
 
+/* ---------- Desfazer / Refazer (sempre visível) ---------- */
+.histbar {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 19;
+  display: flex; gap: 2px; padding: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px -8px rgb(0 0 0 / .3);
+}
+.histbar button { display: inline-flex; align-items: center; gap: 6px; height: 40px; min-width: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-weight: 600; font-size: 14px; }
+.histbar button:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.histbar button:disabled { opacity: .4; cursor: default; }
+.histbar #redoBtn { padding: 0; justify-content: center; }
+.histbar .count { font-family: var(--f-num); font-size: 12px; font-weight: 500; color: var(--muted); min-width: 1ch; }
+.histbar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 900px) { .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+
 @media (max-width: 640px) {
   .figures { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .fig.left { grid-column: 1 / -1; padding-top: 12px; border-top: 1px dashed var(--line); }
@@ -379,6 +393,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 </dialog>
 
 <div class="toast" id="toast" hidden role="status"><span id="toastText"></span><button id="toastUndo">Desfazer</button></div>
+
+<div class="histbar" id="histBar" role="group" aria-label="Histórico de ações">
+  <button type="button" id="undoBtn" disabled aria-label="Nada para desfazer" title="Nada para desfazer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Desfazer<span class="count" id="undoCount" aria-hidden="true"></span></button>
+  <button type="button" id="redoBtn" disabled aria-label="Nada para refazer" title="Nada para refazer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+</div>
 
 <script src="graficos.js"></script>
 <script src="metas.js"></script>
@@ -514,12 +533,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         else docSet(key, clone(remote));
         this.base[key] = clone(remote);
         this.docRev[key] = (d.docRev && d.docRev[key]) || 0;
+        hist.sync(key);
       }
       this.ready = true;
       this.updateStatus();
       afterLoad();
     },
-    mark(key) { this.dirty.add(key); delete this.rejected[key]; this.updateStatus(); this.flushSoon(50); },
+    mark(key) { hist.record(key); this.dirty.add(key); delete this.rejected[key]; this.updateStatus(); this.flushSoon(50); },
     flushSoon(ms) { clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), Math.max(ms, this.retryAt - Date.now(), 0)); },
     flush() { for (const key of [...this.dirty]) if (!this.inflight.has(key)) this.send(key); },
     async send(key) {
@@ -537,6 +557,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
           if (r.status === 409 && attempt < 5) {
             // outro aparelho mudou este documento: mescla com a versão atual do servidor e tenta de novo
             docSet(key, mergeDoc(key, this.base[key], docGet(key), body.doc));
+            hist.sync(key);
             this.base[key] = clone(body.doc);
             this.docRev[key] = body.docRev;
             changed = true;
@@ -574,7 +595,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         if (!r.ok) throw new Error(r.status);
         const body = await r.json();
         for (const [key, doc] of Object.entries(body.docs || {})) {
-          if (this.dirty.has(key)) docSet(key, mergeDoc(key, this.base[key], docGet(key), doc));
+          if (this.dirty.has(key)) { docSet(key, mergeDoc(key, this.base[key], docGet(key), doc)); hist.sync(key); }
           this.base[key] = clone(doc);
           this.docRev[key] = typeof body.docRev === "number" ? body.docRev : body.docRev[key];
         }
@@ -629,12 +650,6 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     store.saveSettings();
     render();
     const name = before[from].name;
-    undo = () => {
-      const ids = new Set(ctxs(kind).map(c => c.id));
-      if (before.length !== ids.size || !before.every(c => ids.has(c.id))) return;
-      state.settings[kind] = before.map(c => ctxs(kind).find(x => x.id === c.id));
-      store.saveSettings(); render();
-    };
     showToast(`"${name}" movida para a posição ${to + 1}`, 6000);
   }
 
@@ -876,6 +891,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       state.months[state.selected].entries.push({ id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
       delete state.drafts[c.id];
       store.saveMonth(state.selected);
+      hist.label(`"${name}" adicionado em ${c.name}`);
       state.focusAdder = c.id;
       render();
     } }, nameIn, valIn, addBtn, err);
@@ -899,7 +915,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
-          if (t && name && value > 0 && (name !== t.name || value !== t.value)) { t.name = name; t.value = value; store.saveMonth(state.selected); }
+          if (t && name && value > 0 && (name !== t.name || value !== t.value)) { t.name = name; t.value = value; store.saveMonth(state.selected); hist.label(`"${name}" editado`); }
         }
         state.edit = null; render();
       };
@@ -923,12 +939,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const name = el("input", { id: `rn-${c.id}`, type: "text", value: c.name, maxlength: "40" });
     const save = () => {
       const v = name.value.trim().replace(/\s+/g, " "), t = cur();
-      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && plainName(x.name) === plainName(v))) { t.name = v; store.saveSettings(); }
+      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && plainName(x.name) === plainName(v))) { const old = t.name; t.name = v; store.saveSettings(); hist.label(`Tabela "${old}" renomeada para "${v}"`); }
       state.menu = null; render();
     };
     name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; render(); } });
     const swatches = el("div", { class: "swatches" }, ...Array.from({ length: KCOUNT }, (_, i) =>
-      el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { cur().color = i; store.saveSettings(); render(); } })));
+      el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { cur().color = i; store.saveSettings(); hist.label(`Cor da tabela "${cur().name}" trocada`); render(); } })));
     const list = ctxs(kind), pos = list.indexOf(c);
     const position = list.length < 2 ? null : [el("span", { class: "small" }, "Posição"), el("div", { class: "pos" },
       el("button", { class: "btn", type: "button", disabled: pos === 0 || null, "aria-label": `Mover ${c.name} para antes`, onclick: () => moveCtx(kind, c.id, pos - 1) }, "← Antes"),
@@ -938,7 +954,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("label", { for: `rn-${c.id}` }, "Nome da tabela"), name,
       position,
       el("span", { class: "small" }, "Cor"), swatches,
-      el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); render(); } },
+      el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); hist.label(`"${t.name}" ${t.repeat ? "passou a repetir" : "deixou de repetir"} no próximo mês`); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
       el("div", { class: "menu-actions" },
         el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
@@ -983,22 +999,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     delete state.drafts[id];
     if (state.menu === id) state.menu = null;
     if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
+    hist.record("settings");                   // não passa por store.mark: registra a ação aqui
+    Object.keys(removed).forEach(m => hist.record("m:" + m));
     store.deleteContext(kind, id, Object.keys(removed));   // uma única operação no servidor
     render();
-    undo = () => {
-      if (!ctxs(kind).some(x => x.id === id)) {
-        const l = ctxs(kind).slice(); l.splice(Math.min(pos, l.length), 0, c); state.settings[kind] = l;
-        store.saveSettings();
-      }
-      for (const [m, items] of Object.entries(removed)) {
-        if (!state.months[m]) continue;          // o mês foi excluído depois
-        const es = state.months[m].entries.slice();
-        for (const [i, e] of items) if (!es.some(x => x.id === e.id)) es.splice(Math.min(i, es.length), 0, e);
-        state.months[m].entries = es;
-        store.saveMonth(m);
-      }
-      render();
-    };
     showToast(`Tabela "${c.name}" excluída` + (n ? ` com ${countLabel(n, "registro", "registros")}` : ""), 10000);
   }
 
@@ -1014,6 +1018,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const c = { id: uid(), name };
       state.settings[kind] = [...ctxs(kind), c];
       store.saveSettings();
+      hist.label(`Tabela "${name}" criada`);
       state.focusAdder = c.id;
       render();
     };
@@ -1027,27 +1032,153 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
 
   // ---------- Ações ----------
-  let undo = null, toastTimer = null;
   function removeEntry(id) {
     const mid = state.selected, list = state.months[mid].entries;
     const idx = list.findIndex(e => e.id === id);
     if (idx < 0) return;
     const [gone] = list.splice(idx, 1);
     store.saveMonth(mid); render();
-    undo = () => {
-      const m = state.months[mid];
-      if (!m || m.entries.some(x => x.id === gone.id)) return;   // mês excluído depois, ou item já voltou
-      m.entries.splice(Math.min(idx, m.entries.length), 0, gone);
-      store.saveMonth(mid); render();
-    };
     showToast(`"${gone.name}" removido`);
   }
-  function showToast(text, ms = 6000) {
-    $("toastText").textContent = text;
-    $("toast").hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; undo = null; }, ms);
+
+  // ---------- Histórico: Desfazer / Refazer ----------
+  // Toda alteração passa por store.mark(documento). O histórico guarda, para cada ação, como cada documento
+  // estava antes e depois dela. Desfazer é uma mesclagem de três versões (mergeDoc) com base = depois,
+  // local = antes e remota = como está agora: volta só o que a ação mudou e mantém o que mudou depois,
+  // inclusive em outro aparelho. Refazer usa a mesma mecânica com a ação inversa.
+  // Cada aparelho tem o seu histórico (últimas 20 ações), guardado na aba (sobrevive ao F5).
+  const HIST_MAX = 20, HIST_KEY = "caderno-historico";
+  const hist = {
+    undo: [], redo: [],
+    shadow: {},          // documento -> última versão conhecida (antes da próxima alteração)
+    pending: null,       // ação sendo montada no tique atual: { label, docs: { chave: { before, after } } }
+    replaying: false,    // true enquanto desfaz/refaz (as marcações não viram ação nova)
+    toastWants: false, toastEntry: null,
+    load() {
+      try {
+        const s = JSON.parse(sessionStorage.getItem(HIST_KEY) || "null");
+        if (s && Array.isArray(s.undo) && Array.isArray(s.redo)) { this.undo = s.undo.slice(-HIST_MAX); this.redo = s.redo.slice(-HIST_MAX); }
+      } catch (e) {}
+    },
+    persist() { try { sessionStorage.setItem(HIST_KEY, JSON.stringify({ undo: this.undo, redo: this.redo })); } catch (e) {} },
+    // o estado atual do documento passa a ser a referência, sem virar ação (dados vindos do servidor)
+    sync(key) { this.shadow[key] = clone(docGet(key)); },
+    record(key) {
+      const before = this.shadow[key] === undefined ? null : this.shadow[key];
+      const after = clone(docGet(key));
+      this.shadow[key] = after;
+      if (this.replaying) return;
+      if (!this.pending) { this.pending = { label: "", docs: {} }; queueMicrotask(() => this.commit()); }
+      const d = this.pending.docs[key];
+      if (d) d.after = after; else this.pending.docs[key] = { before, after };
+    },
+    label(text) { if (this.pending) this.pending.label = text; },
+    commit() {
+      const a = this.pending; this.pending = null;
+      const wants = this.toastWants; this.toastWants = false;
+      if (!a) return;
+      const docs = Object.entries(a.docs).filter(([, d]) => !sameJson(d.before, d.after));
+      if (!docs.length) return;
+      const entry = { label: a.label || genericLabel(docs.map(([k]) => k)), docs: Object.fromEntries(docs) };
+      this.push(this.undo, entry);
+      this.redo = [];
+      if (wants) this.toastEntry = entry;
+      this.persist(); updateHistBar();
+    },
+    push(stack, entry) { stack.push(entry); if (stack.length > HIST_MAX) stack.splice(0, stack.length - HIST_MAX); },
+    // Leva o estado de "after" para "before" em cada documento da ação; devolve a ação inversa.
+    revert(entry) {
+      if (this.pending) this.commit();
+      const inverse = { label: entry.label, docs: {} };
+      let month = null;
+      this.replaying = true;
+      try {
+        for (const [key, { before, after }] of Object.entries(entry.docs)) {
+          const cur = clone(docGet(key));
+          const next = revertDoc(key, before, after, cur);
+          if (sameJson(next, cur)) continue;
+          inverse.docs[key] = { before: cur, after: clone(next) };
+          docSet(key, next);
+          store.mark(key);
+          if (!month && key.startsWith("m:")) month = key.slice(2);
+        }
+      } finally { this.replaying = false; }
+      state.edit = null; state.menu = null;
+      if (month && state.months[month] && month !== state.selected && !location.hash) goto(month);
+      else if (!state.selected || !state.months[state.selected]) afterLoad();
+      else render();
+      return Object.keys(inverse.docs).length ? inverse : null;
+    },
+    step(from, to, verb) {
+      if (this.pending) this.commit();
+      const entry = from.pop();
+      if (!entry) return;
+      const inv = this.revert(entry);
+      if (inv) this.push(to, inv);
+      this.persist(); updateHistBar();
+      showToast(inv ? `${verb}: ${entry.label}` : `Nada a ${verb === "Desfeito" ? "desfazer" : "refazer"}: "${entry.label}" já tinha sido alterado`, 5000, false);
+    },
+    doUndo() { this.step(this.undo, this.redo, "Desfeito"); },
+    doRedo() { this.step(this.redo, this.undo, "Refeito"); },
+  };
+  // Mesclagem de três versões com base = depois da ação e local = antes dela.
+  function revertDoc(key, before, after, cur) {
+    if (key.startsWith("m:") && before === null) {
+      // mês criado pela ação: sai, a não ser que tenha ganhado itens novos depois
+      const entries = mergeById(after && after.entries, [], cur ? cur.entries : []);
+      return entries.length ? { entries } : null;
+    }
+    return mergeDoc(key, after, before, cur);
   }
-  $("toastUndo").addEventListener("click", () => { if (undo) undo(); undo = null; $("toast").hidden = true; });
+  function genericLabel(keys) {
+    if (keys.length > 1) return "Alteração em vários lugares";
+    const k = keys[0];
+    return k === "settings" ? "Alteração nas tabelas" : k === "goals" ? "Alteração nas metas" : `Alteração em ${monthLabel(k.slice(2))}`;
+  }
+  function updateHistBar() {
+    const u = hist.undo[hist.undo.length - 1], r = hist.redo[hist.redo.length - 1];
+    const ub = $("undoBtn"), rb = $("redoBtn");
+    ub.disabled = !u; rb.disabled = !r;
+    ub.title = u ? `Desfazer: ${u.label} (Ctrl+Z)` : "Nada para desfazer";
+    rb.title = r ? `Refazer: ${r.label} (Ctrl+Y)` : "Nada para refazer";
+    ub.setAttribute("aria-label", u ? `Desfazer: ${u.label}` : "Nada para desfazer");
+    rb.setAttribute("aria-label", r ? `Refazer: ${r.label}` : "Nada para refazer");
+    $("undoCount").textContent = hist.undo.length ? String(hist.undo.length) : "";
+  }
+  $("undoBtn").addEventListener("click", () => hist.doUndo());
+  $("redoBtn").addEventListener("click", () => hist.doRedo());
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== "z" && k !== "y") return;
+    const a = document.activeElement;
+    if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable)) return;   // desfazer do próprio campo
+    if ($("confirm").open || state.dragging) return;
+    e.preventDefault();
+    if (k === "z" && !e.shiftKey) hist.doUndo(); else hist.doRedo();
+  });
+
+  // Aviso na parte de baixo. Com "undoable", o botão Desfazer do aviso volta exatamente a ação que o gerou.
+  let toastTimer = null;
+  function showToast(text, ms = 6000, undoable = true) {
+    hist.toastEntry = null;
+    undoable = undoable && !!hist.pending;      // só há o que desfazer se a ação mudou algo neste tique
+    if (undoable) { hist.label(text); hist.toastWants = true; }
+    $("toastText").textContent = text;
+    $("toastUndo").hidden = !undoable;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; hist.toastEntry = null; }, ms);
+  }
+  $("toastUndo").addEventListener("click", () => {
+    const e = hist.toastEntry, i = e ? hist.undo.indexOf(e) : -1;
+    $("toast").hidden = true; hist.toastEntry = null;
+    if (i < 0) return;
+    if (i === hist.undo.length - 1) return hist.doUndo();
+    hist.undo.splice(i, 1);                     // ação mais antiga que a última: desfaz só ela
+    const inv = hist.revert(e);
+    if (inv) hist.push(hist.redo, inv);
+    hist.persist(); updateHistBar();
+  });
 
   // Popup de confirmação (resolve true se o usuário confirmar)
   function confirmDialog({ title, text, details, ok }) {
@@ -1091,16 +1222,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       ok: "Limpar registros",
     });
     if (!ok || !state.months[id]) return;
-    const gone = state.months[id].entries;
     state.months[id].entries = [];
     store.saveMonth(id); render();
-    undo = () => {
-      // devolve os itens apagados sem perder os que entraram depois (aqui ou em outro aparelho)
-      const cur = state.months[id] ? state.months[id].entries : [];
-      const back = gone.filter(e => !cur.some(x => x.id === e.id));
-      state.months[id] = { entries: [...back, ...cur] };
-      store.saveMonth(id); goto(id);
-    };
     showToast(`Registros de ${monthLabel(id)} apagados`, 10000);
   }
 
@@ -1114,18 +1237,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       ok: "Excluir mês",
     });
     if (!ok || !state.months[id]) return;
-    const gone = state.months[id];
     const ids = monthIds(), i = ids.indexOf(id);
     delete state.months[id];
     store.deleteMonth(id);
     state.selected = ids[i + 1] || ids[i - 1] || null;
     state.menu = null; state.edit = null;
     render();
-    undo = () => {
-      const cur = state.months[id] ? state.months[id].entries : [];   // o mês pode ter sido recriado no meio
-      state.months[id] = { entries: [...gone.entries.filter(e => !cur.some(x => x.id === e.id)), ...cur] };
-      store.saveMonth(id); goto(id);
-    };
     showToast(`${monthLabel(id)} excluído`, 10000);
   }
   $("clearMonth").addEventListener("click", clearMonth);
@@ -1185,6 +1302,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => ({ ...e, id: uid(), at: now + i })));
       state.months[id] = { entries: copied };
       store.saveMonth(id);
+      hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : ""));
     }
     $("newMonthSheet").hidden = true;
     goto(id);
@@ -1216,12 +1334,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const chartsApi = {
     state, el, fmt, fmtPlain, monthLabel, monthIds, findCtx, colorOf, ctxs, parseMoney, uid, store, confirmDialog,
     currentMonthId, shiftMonth, sumMoney, plainName,
-    setUndo(fn, text) { undo = fn; showToast(text, 10000); },
+    setUndo(fn, text) { showToast(text, 10000); },   // o desfazer agora vem do histórico (fn não é mais usada)
+    historyLabel(text) { hist.label(text); },
   };
   window.addEventListener("hashchange", () => { window.scrollTo({ top: 0 }); render(); });
   $("tabLanc").addEventListener("click", (e) => { e.preventDefault(); history.pushState(null, "", location.pathname); window.scrollTo({ top: 0 }); render(); });
   window.addEventListener("popstate", render);
 
+  hist.load();
+  updateHistBar();
   render();
   store.init();
 })();

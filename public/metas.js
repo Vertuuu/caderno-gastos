@@ -159,6 +159,7 @@
     });
     draft = { name: "", value: "", monthly: "", months: "" }; lastTyped = null; focusAdd = true;
     save();
+    api.historyLabel(`Meta "${name}" criada`);
   }
 
   // ---------- Edição na célula ----------
@@ -187,6 +188,7 @@
     }
     edit = null;
     save();
+    api.historyLabel(`Meta "${g.name}" editada`);
   }
 
   function cell(g, field, display, opts = {}) {
@@ -212,12 +214,12 @@
     const k = `var(--k${g.color % KCOUNT})`;
     const swatchCell = colorOpen === g.id
       ? el("div", { class: "gswatches", role: "group", "aria-label": `Cor de ${g.name}` }, ...Array.from({ length: KCOUNT }, (_, i) =>
-          el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(i === g.color), onclick: () => { g.color = i; colorOpen = null; save(); } })))
+          el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(i === g.color), onclick: () => { g.color = i; colorOpen = null; save(); api.historyLabel(`Cor da meta "${g.name}" trocada`); } })))
       : el("button", { class: "gdot", style: `background:${k}`, title: "Trocar cor", "aria-label": `Trocar cor de ${g.name}`, onclick: () => { colorOpen = g.id; edit = null; render(); } });
     const on = isActive(g);
     return el("tr", { class: `grow ${d.done ? "done" : ""} ${on ? "" : "inactive"}`, style: `--k:${k}` },
       el("td", { class: "gcheck" }, el("label", { class: "gtoggle", title: on ? "Ativa: entra no resumo do topo. Clique para desativar." : "Inativa: fora do resumo do topo. Clique para ativar." },
-        el("input", { type: "checkbox", checked: on ? "" : null, "aria-label": `Meta ${g.name} ativa`, onchange: (e) => { g.active = e.target.checked; save(); } }))),
+        el("input", { type: "checkbox", checked: on ? "" : null, "aria-label": `Meta ${g.name} ativa`, onchange: (e) => { g.active = e.target.checked; save(); api.historyLabel(`Meta "${g.name}" ${g.active ? "ativada" : "desativada"}`); } }))),
       el("td", { class: "gcolor" }, swatchCell),
       cell(g, "name", el("span", { class: "gname" }, g.name, d.done ? el("span", { class: "gdone" }, "✓ atingida") : null), { label: "Nome" }),
       cell(g, "value", api.fmtPlain(g.value), { cls: "num r", label: "Valor" }),
