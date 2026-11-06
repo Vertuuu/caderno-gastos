@@ -194,6 +194,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 ### Previsão do saldo
 
 - Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".
+- É **opcional** e vem **desligada**: aparece só uma faixa com o botão **Mostrar**. Para esconder de novo, use **Ocultar** no topo da seção. A escolha vale para todos os aparelhos.
 - Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**.
 - Se o saldo ficar **negativo**, um aviso mostra em quais dias e qual é o pior valor. O trecho negativo do gráfico fica em vermelho.
 - **Gráfico:** passe o mouse (ou toque) para ver o saldo de cada dia e o que entra e sai nele. Com o teclado, use as setas. **Ver dia a dia** abre a mesma informação em tabela.

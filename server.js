@@ -43,6 +43,8 @@ function normalize(raw, problems) {
   }
   // regras automáticas da importação de extrato
   out.settings.rules = isObj(d.settings) && Array.isArray(d.settings.rules) ? d.settings.rules.filter(r => isObj(r) && typeof r.id === "string" && typeof r.match === "string") : [];
+  // previsão do saldo ligada (opcional; sem o campo, fica desligada)
+  if (isObj(d.settings) && typeof d.settings.forecast === "boolean") out.settings.forecast = d.settings.forecast;
   if (isObj(d.months)) {
     for (const [id, m] of Object.entries(d.months)) {
       if (!MONTH_RE.test(id) || !isObj(m) || !Array.isArray(m.entries)) { problems.push(`mês ${id} inválido descartado`); continue; }
@@ -238,6 +240,11 @@ function cleanSettings(b) {
       !b.rules.every(r => isObj(r) && isStr(r.id, 40) && isStr(r.match, 60) && isStr(r.ctx, 40) && (r.name === undefined || isStr(r.name, 120)))) return null;
     out.rules = b.rules.map(r => r.name === undefined ? { id: r.id, match: r.match, ctx: r.ctx } : { id: r.id, match: r.match, ctx: r.ctx, name: r.name });
   }
+  // mostrar a previsão do saldo em Lançamentos (vale para todos os aparelhos)
+  if (b.forecast !== undefined) {
+    if (typeof b.forecast !== "boolean") return null;
+    out.forecast = b.forecast;
+  }
   return out;
 }
 
@@ -256,8 +263,8 @@ function cleanMonth(b) {
     if (e.day !== undefined) o.day = e.day;
     if (e.part !== undefined) o.part = e.part;
     if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
-    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };
-    if (e.ext !== undefined) o.ext = e.ext;   // identificador da transação importada do extrato (evita duplicar)   // parcela k de uma compra parcelada (0 = antecipação)
+    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };   // parcela k de uma compra parcelada (0 = antecipação)
+    if (e.ext !== undefined) o.ext = e.ext;   // identificador da transação importada do extrato (evita duplicar)
     return o;
   }) };
   if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
@@ -358,6 +365,9 @@ const server = http.createServer(async (req, res) => {
       if (conflict(res, "settings", raw.baseRev, () => data.settings) || diskBlocked(res)) return;
       const ids = new Set([...b.expense, ...b.income].map(c => c.id));
       if ([...data.settings.expense, ...data.settings.income].some(c => !ids.has(c.id))) safetyBackup("tabela");
+      // uma página antiga aberta em algum aparelho não conhece as regras da importação: não as apaga
+      if (b.rules === undefined && data.settings.rules) b.rules = data.settings.rules;
+      if (b.forecast === undefined && data.settings.forecast !== undefined) b.forecast = data.settings.forecast;
       data.settings = b;
       return send(res, 200, commit(["settings"]));
     }

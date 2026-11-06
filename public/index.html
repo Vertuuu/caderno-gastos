@@ -159,8 +159,11 @@ main .inner { padding-block: 22px 96px; display: grid; gap: 30px; }
 /* ---------- Cartão-tabela ---------- */
 .card { background: color-mix(in srgb, var(--k) var(--row-k), var(--surface)); border: 1px solid color-mix(in srgb, var(--k) var(--card-k), var(--line)); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: grid; min-width: 0; }
 .card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 6px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
+/* nome da tabela inteiro: num cartão estreito ele quebra entre as palavras e os ícones (↻, calendário)
+   descem para a linha de baixo, em vez de o nome virar "S…" */
 .card-title { font-weight: 600; font-size: 15.5px; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.card-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-title > span { min-width: 0; line-height: 1.25; overflow-wrap: break-word; }
+.card-title > span .repeat { display: inline-flex; vertical-align: -1px; margin-left: 6px; white-space: nowrap; }
 .card-title i { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); flex: none; }
 .card-total { font-family: var(--f-num); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); white-space: nowrap; }
 .card-head .iconbtn { color: var(--head-ink); opacity: .85; }
@@ -227,7 +230,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .payline select { min-width: 0; width: 100%; }
 .paysub select { width: auto; }
 .menu .payline input.payn { width: 100%; text-align: center; padding: 5px 4px; }
-.menu .payline input.paypct { width: 100%; text-align: right; padding: 5px 4px; }
+.menu .payline input.paypct { width: 100%; text-align: right; padding: 5px 4px; color: var(--ink); }
 .pctwrap { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: var(--muted); }
 .paywhen { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .payline .iconbtn { width: 30px; height: 30px; }
@@ -262,6 +265,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .forecast { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
 .fc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .fc-head h2 { margin: 0; font-size: 18px; }
+/* título, mês (ou descrição) e o botão Mostrar/Ocultar sempre numa linha só; o texto do meio é que encolhe */
+.fc-head:has(.fc-toggle) { flex-wrap: nowrap; align-items: center; min-width: 0; }
+.fc-head:has(.fc-toggle) h2 { white-space: nowrap; }
+.fc-head:has(.fc-toggle) .small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fc-head .fc-toggle { margin-left: auto; flex: none; padding: 4px 12px; font-size: 13px; }
+.forecast.is-off { padding-block: 12px; }
+.forecast.is-off .fc-head h2 { font-size: 16px; }
+@media (max-width: 640px) {
+  .forecast.is-off .fc-head .small { display: none; }
+}
 .fc-figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .fc-fig { display: grid; gap: 2px; min-width: 0; }
 .fc-fig .lab { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
@@ -316,6 +329,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .instopts label { display: inline-flex; align-items: center; gap: 4px; }
 .adder .instopts input { width: 58px; text-align: center; padding: 5px 6px; border-style: solid; background: var(--surface); }
 .instopts select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+@media (max-width: 640px) {
+  /* no celular, campos com letra igual à dos outros campos (menor que isso, o iPhone dá zoom ao tocar) */
+  .adder .instopts input, .instopts select, .payline select, .menu .payline input, .imp-table select, .imp-addrule input, .imp-addrule select { font-size: 15px; }
+}
 .instprev { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); font-family: var(--f-num); }
 .instlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
 .inst { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--k); border-radius: 12px; background: var(--surface); }
@@ -330,9 +347,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .inst-actions { grid-auto-flow: column; justify-content: start; }
 }
 .since { border: 1px solid color-mix(in srgb, var(--focus) 40%, var(--line)); background: color-mix(in srgb, var(--focus) 6%, var(--surface)); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
-.since-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.since-head h2 { margin: 0; font-size: 16px; }
-.since-head .btn { padding: 4px 12px; font-size: 13px; }
+/* título à esquerda (pode quebrar linha) e "Entendi" sempre à direita, na primeira linha */
+.since-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.since-head h2 { margin: 0; font-size: 16px; line-height: 1.35; }
+.since-head .btn { padding: 4px 12px; font-size: 13px; white-space: nowrap; margin-top: -2px; }
 .since-block { display: grid; gap: 8px; justify-items: start; }
 .since-block p { margin: 0; font-size: 14px; }
 .since-block ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: 100%; }
@@ -371,8 +389,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .imp-rules li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 4px 0; border-top: 1px solid var(--hair); }
 .imp-addrule { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .imp-addrule input, .imp-addrule select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; min-width: 0; flex: 1 1 140px; }
+.imp-pick input[type="file"] { max-width: 100%; min-width: 0; }
 @media (max-width: 640px) {
+  /* no celular a janela cabe na tela visível e o rodapé com "Importar" fica sempre à vista */
+  .importdlg { width: calc(100vw - 16px); max-width: none; max-height: calc(100dvh - 16px); }
+  .imp-pick input[type="file"] { width: 100%; }
   .importdlg[open] { padding: 14px; }
+  .importdlg .imp-foot { position: sticky; bottom: -14px; z-index: 2; margin: 0 -14px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
   /* no celular cada transação vira um bloco: marca | nome / data e valor / tabela */
   .imp-table thead { display: none; }
   .imp-table, .imp-table tbody { display: block; }
@@ -736,8 +759,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return out;
   }
   function mergeDoc(key, base, local, remote) {
-    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []),
-      rules: mergeById(base && base.rules, local.rules, remote ? remote.rules : []) };
+    if (key === "settings") {
+      const out = { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []),
+        rules: mergeById(base && base.rules, local.rules, remote ? remote.rules : []) };
+      // previsão do saldo ligada: vale a daqui se foi mudada aqui; se não, a de lá
+      const on = (d) => !!(d && d.forecast === true);
+      out.forecast = on(base) !== on(local) ? on(local) : on(remote);
+      return out;
+    }
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
     if (key === "plans") return { plans: mergeById(base && base.plans, local.plans, remote ? remote.plans : []) };
     if (local === null) return null;                  // mês excluído aqui
@@ -748,14 +777,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return opening === undefined ? { entries } : { entries, opening };
   }
   function docGet(key) {
-    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [] };
+    if (key === "settings") {
+      // "forecast" vai sempre como true/false: sem o campo, o servidor manteria o valor antigo
+      return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [], forecast: state.settings.forecast === true };
+    }
     if (key === "goals") return { goals: state.goals };
     if (key === "plans") return { plans: state.plans };
     const m = state.months[key.slice(2)];
     return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
   }
   function docSet(key, doc) {
-    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income, rules: doc.rules || [] };
+    if (key === "settings") {
+      state.settings = { expense: doc.expense, income: doc.income, rules: doc.rules || [] };
+      state.settings.forecast = doc.forecast === true;
+    }
     else if (key === "goals") state.goals = doc.goals;
     else if (key === "plans") state.plans = doc.plans;
     else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
@@ -1096,7 +1131,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       .filter(e => e.value > 0);
   }
   const partOf = (c, e) => c && c.pay && e.part ? c.pay.parts.find(p => p.id === e.part) : null;
-  const dayLabel = (monthId, day) => `${pad2(day)}/${monthId.slice(5)}`;
+  // dia limitado ao tamanho do mês (um "dia 31" cai no dia 30 ou no último dia de fevereiro)
+  const dayLabel = (monthId, day) => `${pad2(Math.min(day, daysIn(monthId)))}/${monthId.slice(5)}`;
 
   // ---------- Compras parceladas ----------
   // Uma compra (state.plans) vira um registro por mês: "Nome (k/n)", com { inst: { plan, k } }. As parcelas são
@@ -1152,8 +1188,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return `vence ${dayLabel(monthId, d)}`;
   }
   function dueTitle(monthId, e) {
-    const d = dueDay(monthId, e.day);
-    const moved = d !== e.day ? ` O dia ${e.day} cai em fim de semana ou feriado: dá para pagar até ${dayLabel(monthId, d)}.` : "";
+    const d = dueDay(monthId, e.day), last = daysIn(monthId), base = Math.min(e.day, last);
+    const moved = (e.day > last ? ` Este mês não tem dia ${e.day}: vale o dia ${last}.` : "") +
+      (d !== base ? ` O dia ${base} cai em fim de semana ou feriado: dá para pagar até ${dayLabel(monthId, d)}.` : "");
     return `Vence todo dia ${e.day}.${moved}${e.paid ? " Já paga." : ""}`;
   }
 
@@ -1226,16 +1263,17 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function isPaid(e) {
     if (!e.day || !state.selected) return false;
     const cur = currentMonthId();
-    return state.selected < cur || (state.selected === cur && e.day <= new Date().getDate());
+    return state.selected < cur || (state.selected === cur && Math.min(e.day, daysIn(cur)) <= new Date().getDate());
   }
   // "R$ 3.000,00 já caiu · dia 20: R$ 2.000,00" no resumo, quando as entradas têm data
   function incomeTimeline(es) {
     const dated = es.filter(e => e.kind === "income" && e.day);
     if (!dated.length || state.selected < currentMonthId()) return "";
     const paid = sumMoney(dated.filter(isPaid).map(e => e.value));
-    const next = dated.filter(e => !isPaid(e)).map(e => e.day).sort((a, b) => a - b)[0];
+    const last = daysIn(state.selected), dayOf = (e) => Math.min(e.day, last);
+    const next = dated.filter(e => !isPaid(e)).map(dayOf).sort((a, b) => a - b)[0];
     if (!next) return "Tudo recebido";
-    const nextSum = sumMoney(dated.filter(e => e.day === next).map(e => e.value));
+    const nextSum = sumMoney(dated.filter(e => !isPaid(e) && dayOf(e) === next).map(e => e.value));
     return (paid > 0 ? `${fmt(paid)} já caiu · ` : "") + `dia ${next}: ${fmt(nextSum)}`;
   }
 
@@ -1268,7 +1306,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (last && /^\d{4}-\d{2}-\d{2}$/.test(last) && last < todayStr() && state.months[cur]) {
       const from = last.slice(0, 7) === cur ? Number(last.slice(8)) + 1 : 1;
       const es = state.months[cur].entries;
-      fell = es.filter(e => e.kind === "income" && e.day && e.day >= from && e.day <= today);
+      fell = es.filter(e => e.kind === "income" && e.day && (d => d >= from && d <= today)(Math.min(e.day, daysIn(cur))));
       due = es.filter(e => e.kind === "expense" && e.day && !e.paid && (d => d >= from && d <= today)(dueDay(cur, e.day)));
     }
     return { cur, missing, last, fell, due };
@@ -1298,9 +1336,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (s.fell.length) parts.push(el("div", { class: "since-block" },
       el("p", {}, el("b", {}, s.fell.length === 1 ? "Entrada que caiu" : "Entradas que caíram"), ` · ${fmt(sumMoney(s.fell.map(e => e.value)))}`),
       el("ul", {}, ...s.fell.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip paid" }, dayLabel(s.cur, e.day)), e.name, el("b", { class: "num" }, fmt(e.value)))))));
+    // as contas vencidas já aparecem uma a uma na faixa de lembrete logo abaixo (com "✓ Paga"):
+    // aqui fica só o resumo e o atalho para marcar todas de uma vez, sem repetir a lista
     if (s.due.length) parts.push(el("div", { class: "since-block" },
-      el("p", {}, el("b", {}, s.due.length === 1 ? "Conta que venceu" : "Contas que venceram"), ` · ${fmt(sumMoney(s.due.map(e => e.value)))}`),
-      el("ul", {}, ...s.due.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip due-late" }, dayLabel(s.cur, dueDay(s.cur, e.day))), e.name, el("b", { class: "num" }, fmt(e.value))))),
+      el("p", {}, el("b", {}, s.due.length === 1 ? "Conta que venceu" : `${s.due.length} contas que venceram`), ` · ${fmt(sumMoney(s.due.map(e => e.value)))}`,
+        el("span", { class: "small" }, s.due.length === 1 ? " (está na faixa logo abaixo)" : " (estão na faixa logo abaixo)")),
       el("button", { class: "btn", type: "button", onclick: () => {
         const ids = new Set(s.due.map(e => e.id));
         state.months[s.cur].entries.forEach(e => { if (ids.has(e.id)) e.paid = true; });
@@ -1399,6 +1439,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const box = $("forecast"), mid = state.selected, m = state.months[mid];
     if (!m || !m.entries.length) { box.hidden = true; box.replaceChildren(); return; }
     box.hidden = false;
+    // opcional: desligada (padrão), a seção vira uma faixa com o botão para mostrar
+    const on = state.settings.forecast === true;
+    box.classList.toggle("is-off", !on);
+    if (!on) {
+      box.replaceChildren(el("div", { class: "fc-head" },
+        el("h2", { id: "fcTitle" }, "Previsão do saldo"),
+        el("span", { class: "small" }, "Saldo dia a dia, com as datas de recebimento e os vencimentos"),
+        el("button", { class: "btn fc-toggle", type: "button", onclick: () => setForecastOn(true) }, "Mostrar")));
+      return;
+    }
     const f = forecast(mid), prev = shiftMonth(mid, -1), prevEnd = monthEnd(prev);
     const negDays = f.neg.reduce((s, [a, b]) => s + b - a + 1, 0);
 
@@ -1459,9 +1509,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     table.addEventListener("toggle", () => { state.fcOpen = table.open; });
 
     box.replaceChildren(
-      el("div", { class: "fc-head" }, el("h2", { id: "fcTitle" }, "Previsão do saldo"), el("span", { class: "small" }, monthLabel(mid))),
+      el("div", { class: "fc-head" }, el("h2", { id: "fcTitle" }, "Previsão do saldo"), el("span", { class: "small" }, monthLabel(mid)),
+        el("button", { class: "btn ghost fc-toggle", type: "button", onclick: () => setForecastOn(false) }, "Ocultar")),
       ...[figs, warn, chart, note, opening, table].filter(Boolean));
     drawForecast(chart, f);
+  }
+
+  // liga/desliga a previsão do saldo (salva nas tabelas: vale para todos os aparelhos e entra no desfazer)
+  function setForecastOn(on) {
+    if ((state.settings.forecast === true) === on) return;
+    state.settings.forecast = on;
+    state.fcEdit = null;
+    store.saveSettings();
+    hist.label(on ? "Previsão do saldo ligada" : "Previsão do saldo ocultada");
+    render();
   }
 
   function setOpening(mid, v, label) {
@@ -1620,9 +1681,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const canMove = ctxs(kind).length > 1;
     const head = el("div", { class: "card-head" },
       canMove ? el("button", { class: "drag-handle", type: "button", tabindex: "-1", "aria-hidden": "true", title: "Arraste para mover", onpointerdown: (ev) => startDrag(ev, kind, c.id) }, "⠿") : el("span"),
-      el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name),
+      // os ícones ficam dentro do texto, logo depois do nome: num cartão estreito o nome quebra entre as palavras
+      el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name,
         isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null,
-        payOn(c) ? payBadge(c) : null),
+        payOn(c) ? payBadge(c) : null)),
       el("span", { class: "card-total" }, fmt(sum)),
       el("button", { class: "iconbtn trash", "aria-label": `Excluir a tabela ${c.name}`, title: "Excluir tabela", onclick: () => deleteCtx(kind, c.id) }, trashIcon()),
       el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; state.payDraft = null; render(); } }, "⋯"));
@@ -1633,7 +1695,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
     // linha de inclusão
     const splitN = payOn(c) && c.pay.parts.length > 1 ? c.pay.parts.length : 0;
-    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (divide em ${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
+    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
     const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
     const err = el("p", { class: "adder-err", hidden: true });
@@ -1671,7 +1733,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
           el("div", { class: "instopts" }, el("label", {}, nIn, "x"), start, el("label", { title: "Dia em que a fatura vence (opcional)" }, "vence dia ", dayIn)), preview);
       }
     }
-    const adder = el("form", { class: "adder" + (inst ? " inst" : ""), "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
+    // "is-inst" (e não "inst", que é a classe dos cartões da seção Compras parceladas)
+    const adder = el("form", { class: "adder" + (inst ? " is-inst" : ""), "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
       ev.preventDefault();
       const name = nameIn.value.trim(), value = parseMoney(valIn.value);
       if (!name) { err.textContent = "Escreva o nome do item."; err.hidden = false; nameIn.focus(); return; }
@@ -1715,7 +1778,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       // entradas têm o dia em que caem (vazio = sem data)
       // nas saídas, o dia do vencimento
       const isIn = e.kind === "income";
-      const dIn = el("input", { class: "day", type: "number", min: "1", max: String(daysIn(state.selected)), inputmode: "numeric", placeholder: isIn ? "dia" : "venc.", value: e.day ? String(e.day) : "",
+      const dIn = el("input", { class: "day", type: "number", min: "1", max: "31", inputmode: "numeric", placeholder: isIn ? "dia" : "venc.", value: e.day ? String(e.day) : "",
         "aria-label": isIn ? "Dia do recebimento" : "Dia do vencimento", title: isIn ? "Dia em que o dinheiro cai (vazio = sem data)" : "Dia em que a conta vence, todo mês (vazio = sem vencimento)" });
       let done = false;
       const commit = (save) => {
@@ -1724,7 +1787,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
           let day = t ? t.day : undefined;
-          if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= daysIn(state.selected) ? dv : undefined; }
+          // 1 a 31: num mês mais curto o dia 31 vale como o último dia (e volta a ser 31 nos meses que têm)
+          if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= 31 ? dv : undefined; }
           if (t && name && value > 0 && (name !== t.name || value !== t.value || day !== t.day)) {
             if (day !== t.day) { delete t.part; if (day) t.day = day; else { delete t.day; delete t.paid; } }   // dia escolhido à mão deixa de seguir a regra
             t.name = name; t.value = value;
@@ -1800,9 +1864,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       t.pay = clone(d.pay);
       store.saveSettings(); hist.label(label || changed); render();
     };
+    // ligar/desligar vale na hora, sobre a configuração salva (um rascunho que ainda não soma 100% é descartado)
     const toggle = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!(d.pay && d.pay.on)), onclick: () => {
-      if (!d.pay) d.pay = newPay(); else d.pay.on = !d.pay.on;
-      commit(`Datas de recebimento de "${c.name}" ${d.pay.on ? "ligadas" : "desligadas"}`);
+      const t = cur(), on = !(d.pay && d.pay.on);
+      const next = t.pay ? { ...clone(t.pay), on } : on ? newPay() : null;
+      state.payDraft = { ctx: c.id, pay: clone(next) };
+      if (sameJson(t.pay || null, next)) { render(); return; }
+      t.pay = next;
+      store.saveSettings(); hist.label(`Datas de recebimento de "${c.name}" ${on ? "ligadas" : "desligadas"}`); render();
     } }, el("span", { class: "box" }, "✓"), "Dividir em datas de recebimento");
     if (!d.pay || !d.pay.on) return el("div", { class: "paybox" }, toggle,
       el("p", { class: "small" }, "Ex.: salário com 60% no 5º dia útil e 40% no dia 20. Cada valor lançado é dividido nas datas."));
@@ -1837,12 +1906,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     } }, "+ Data") : null;
     const sat = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!p.sat), title: "Pela CLT o sábado conta como dia útil para o pagamento do salário; muitas empresas contam só de segunda a sexta", onclick: () => { p.sat = !p.sat; commit(`Sábado ${p.sat ? "passou a contar" : "deixou de contar"} como dia útil em "${c.name}"`); } },
       el("span", { class: "box" }, "✓"), "Sábado conta como dia útil");
-    // registros deste mês lançados antes de ligar a divisão
-    const loose = mid && state.months[mid] ? state.months[mid].entries.filter(e => e.ctx === c.id && !e.part) : [];
+    // registros deste mês lançados antes de ligar a divisão (sem regra e sem dia: um registro que já tem dia,
+    // como uma parte cujo dia foi mudado à mão ou uma entrada importada, não é dividido de novo)
+    const loose = mid && state.months[mid] ? state.months[mid].entries.filter(e => e.ctx === c.id && !e.part && !e.day) : [];
     const ready = Math.abs(sum - 100) < 0.001 && sameJson(cur().pay || null, p);
     const splitNow = loose.length && ready ? el("button", { class: "btn", type: "button", onclick: () => {
       const t = cur();
-      state.months[mid].entries = state.months[mid].entries.flatMap(e => e.ctx === c.id && !e.part ? splitEntry(mid, t, e) : [e]);
+      state.months[mid].entries = state.months[mid].entries.flatMap(e => e.ctx === c.id && !e.part && !e.day ? splitEntry(mid, t, e) : [e]);
       store.saveMonth(mid); hist.label(`${countLabel(loose.length, "item dividido", "itens divididos")} em "${c.name}"`);
       state.menu = null; state.payDraft = null; render();
     } }, `Dividir ${loose.length === 1 ? "o item" : `os ${loose.length} itens`} deste mês nas datas`) : null;
@@ -1941,21 +2011,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     box.hidden = !list.length;
     if (!list.length) return box.replaceChildren();
     const monthly = sumMoney(list.filter(p => planActive(p, mid)).map(p => instValue(p, planK(p, mid))));
-    const owed = sumMoney(list.map(p => { const k = planK(p, mid); return k < 1 ? p.total : instLeft(p, k); }));
+    // compra antecipada neste mês: o resto já foi lançado aqui e não sobra nada para os próximos meses
+    const paidOff = (p) => p.until === mid;
+    const owed = sumMoney(list.map(p => { const k = planK(p, mid); return paidOff(p) ? 0 : k < 1 ? p.total : instLeft(p, k); }));
     box.replaceChildren(
       el("div", { class: "sec-head" }, el("h2", { id: "hInst" }, "Compras parceladas ", el("span", { class: "tag" }, String(list.length))),
         el("span", { class: "small" }, `${fmt(monthly)} neste mês · ${fmt(owed)} nos próximos meses`)),
       el("ul", { class: "instlist" }, ...list.map(p => {
-        const k = planK(p, mid), c = findCtx(p.ctx)[1], left = k < 1 ? p.total : instLeft(p, k);
-        const status = k < 1 ? `começa em ${monthLabel(p.first)}` : `parcela ${k} de ${p.n} neste mês`;
-        const pct = Math.min(100, Math.max(0, k) / p.n * 100);
+        const k = planK(p, mid), c = findCtx(p.ctx)[1], off = paidOff(p), left = off ? 0 : k < 1 ? p.total : instLeft(p, k);
+        const status = k < 1 ? `começa em ${monthLabel(p.first)}` : off ? `parcela ${k} e o resto antecipados neste mês` : `parcela ${k} de ${p.n} neste mês`;
+        const pct = off ? 100 : Math.min(100, Math.max(0, k) / p.n * 100);
         return el("li", { class: "inst", style: `--k:${colorOf("expense", c)}` },
           el("div", { class: "inst-main" },
             el("b", {}, p.name), el("span", { class: "small" }, `${c.name} · ${p.n}x de ${fmt(instValue(p, 2))} · total ${fmt(p.total)}` + (p.day ? ` · vence dia ${p.day}` : "")),
             el("div", { class: "inst-bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(p.n), "aria-valuenow": String(Math.max(0, k)), "aria-label": `${Math.max(0, k)} de ${p.n} parcelas` }, el("i", { style: `width:${pct}%` })),
-            el("span", { class: "small" }, `${status} · ${left > 0 ? `faltam ${fmt(left)}` : "última parcela"} · termina em ${monthLabel(planLast(p))}`)),
+            el("span", { class: "small" }, `${status} · ${off ? "quitada" : left > 0 ? `faltam ${fmt(left)}` : "última parcela"} · termina em ${monthLabel(off ? mid : planLast(p))}`)),
           el("div", { class: "inst-actions" },
-            k >= 1 && k < p.n ? el("button", { class: "btn", type: "button", onclick: () => payOffPlan(p.id) }, "Antecipar o resto") : null,
+            k >= 1 && k < p.n && !off ? el("button", { class: "btn", type: "button", onclick: () => payOffPlan(p.id) }, "Antecipar o resto") : null,
             el("button", { class: "btn ghost danger", type: "button", onclick: () => deletePlan(p.id) }, "Excluir compra")));
       })));
   }
@@ -1967,7 +2039,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const ok = await confirmDialog({ title: `Antecipar "${p.name}"?`, text: `As ${p.n - k} parcelas que faltam viram um único pagamento em ${monthLabel(mid)}, e somem dos meses seguintes.`,
       details: [["Parcelas antecipadas", `${k + 1} a ${p.n}`], ["Valor", fmt(left)]], ok: "Antecipar" });
     const t = state.plans.find(x => x.id === id);
-    if (!ok || !t || !state.months[mid]) return;
+    if (!ok || !t || !state.months[mid] || t.until === mid) return;   // já antecipada (ex.: em outro aparelho)
     for (const m of monthIds()) {
       if (m <= mid) continue;
       const es = state.months[m].entries;
@@ -2525,7 +2597,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
         const c = findCtx(e.ctx)[1], p = partOf(c, e);
         if (p) o.day = payDay(id, p, c.pay.sat);
-        else if (o.day) { o.day = Math.min(o.day, daysIn(id)); delete o.part; }
+        // o dia escolhido à mão é mantido como está (um vencimento no dia 31 continua no 31, e num mês mais
+        // curto vale o último dia na hora de mostrar e calcular, sem perder o 31 nos meses seguintes)
+        else if (o.day) delete o.part;
         return o;
       }));
       const insts = state.plans.filter(p => planActive(p, id) && findCtx(p.ctx)[1]).map((p, i) => instEntry(p, id, now + copied.length + i));
