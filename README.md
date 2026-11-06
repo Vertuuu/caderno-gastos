@@ -142,6 +142,15 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
 
+### Datas de recebimento
+
+- Nas tabelas de **entradas**, o menu ⋯ tem **Dividir em datas de recebimento**: cada valor lançado é dividido nas datas configuradas. Exemplo: salário de R$ 5.000 com 60% no **5º dia útil** e 40% **todo dia 20** vira dois registros, de R$ 3.000 e R$ 2.000, cada um com o seu dia.
+- Cada data pode ser **"dia útil"** (o Nº dia útil do mês, contando de segunda a sexta, pulando feriados nacionais, com opção de contar o sábado) ou **"dia fixo"** (todo mês no mesmo dia, que **antecipa**, **adia** ou **mantém** quando cai em fim de semana ou feriado). Dá para ter até 6 datas, e as porcentagens precisam somar 100%.
+- No mês seguinte, os itens copiados têm o dia **recalculado**, porque o 5º dia útil muda de mês para mês.
+- O resumo do mês mostra quanto **já caiu** e qual é o **próximo recebimento**. Cada registro mostra a data e fica verde depois que ela passa.
+- Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para pôr ou tirar a data de qualquer entrada clicando nela para editar.
+- O botão **Dividir os itens deste mês** aplica a divisão ao que já foi lançado antes de ligar a opção.
+
 ### Meses
 
 - **Novo mês** com cópia automática dos itens das tabelas marcadas para repetir (por padrão, Gastos Fixos e Salário). Na hora de criar, dá para escolher quais copiar.

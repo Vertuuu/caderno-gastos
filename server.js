@@ -197,6 +197,20 @@ const posNum = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0;
 const optBool = (b) => b === undefined || typeof b === "boolean";
 const uniqueIds = (list) => new Set(list.map(x => x.id)).size === list.length;
 
+// Datas de recebimento de uma tabela de entradas: divide o valor em parcelas, cada uma com a sua regra de dia
+// ("util" = N-ésimo dia útil do mês; "dia" = dia fixo, com ajuste quando cai em fim de semana ou feriado).
+function cleanPay(p) {
+  if (p === undefined) return undefined;
+  if (!isObj(p) || typeof p.on !== "boolean" || !optBool(p.sat) || !Array.isArray(p.parts) || p.parts.length < 1 || p.parts.length > 6) return null;
+  const ok = p.parts.every(x => isObj(x) && isStr(x.id, 40) && (x.type === "util" || x.type === "dia") && Number.isInteger(x.n) &&
+    x.n >= 1 && x.n <= (x.type === "util" ? 23 : 31) && posNum(x.pct) && x.pct <= 100 &&
+    (x.adjust === undefined || x.adjust === "antes" || x.adjust === "depois" || x.adjust === "manter"));
+  if (!ok || !uniqueIds(p.parts)) return null;
+  const sum = p.parts.reduce((s, x) => s + Math.round(x.pct * 100), 0);
+  if (sum !== 10000) return null;
+  return { on: p.on, sat: !!p.sat, parts: p.parts.map(x => ({ id: x.id, type: x.type, n: x.n, pct: x.pct, adjust: x.adjust || "antes" })) };
+}
+
 function cleanSettings(b) {
   if (!isObj(b)) return null;
   const out = {};
@@ -204,11 +218,12 @@ function cleanSettings(b) {
     const list = b[k];
     if (!Array.isArray(list) || list.length > 200) return null;
     if (!list.every(c => isObj(c) && isStr(c.id, 40) && isStr(c.name, 60) && optBool(c.repeat) &&
-      (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)))) return null;
+      (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)) && cleanPay(c.pay) !== null)) return null;
     out[k] = list.map(c => {
       const o = { id: c.id, name: c.name };
       if (c.color !== undefined) o.color = c.color;
       if (c.repeat !== undefined) o.repeat = c.repeat;
+      if (c.pay !== undefined) o.pay = cleanPay(c.pay);
       return o;
     });
   }
@@ -219,11 +234,14 @@ function cleanSettings(b) {
 function cleanMonth(b) {
   if (!isObj(b) || !Array.isArray(b.entries) || b.entries.length > 5000) return null;
   if (!b.entries.every(e => isObj(e) && isStr(e.id, 40) && (e.kind === "expense" || e.kind === "income") && isStr(e.ctx, 40) &&
-    isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)))) return null;
+    isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
+    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)))) return null;
   if (!uniqueIds(b.entries)) return null;
   return { entries: b.entries.map(e => {
     const o = { id: e.id, kind: e.kind, ctx: e.ctx, name: e.name, value: e.value };
     if (e.at !== undefined) o.at = e.at;
+    if (e.day !== undefined) o.day = e.day;
+    if (e.part !== undefined) o.part = e.part;
     return o;
   }) };
 }

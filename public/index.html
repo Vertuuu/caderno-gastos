@@ -212,6 +212,26 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .row .del:hover { background: var(--spend-soft); color: var(--spend); }
 .row input { border: 1px solid var(--focus); border-radius: 7px; padding: 6px 9px; background: var(--surface); width: 100%; min-width: 0; }
 .row input.val { text-align: right; font-family: var(--f-num); width: 112px; }
+.row.with-day { grid-template-columns: minmax(0, 1fr) 62px auto 30px; }
+.row input.day { width: 62px; text-align: center; font-family: var(--f-num); }
+.daychip { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-family: var(--f-num); font-variant-numeric: tabular-nums; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; white-space: nowrap; }
+.daychip.paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
+.card-title .paybadge { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
+.paybox { display: grid; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.paybox .toggle { justify-self: start; background: var(--surface); }
+.payline { display: grid; grid-template-columns: minmax(0, 1fr) 52px 66px 30px; align-items: center; gap: 6px; padding: 8px; border: 1px solid var(--hair); border-radius: 10px; background: var(--surface); }
+.paysub { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.paysub select { flex: none; }
+.payline select, .menu .payline input { width: auto; border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.payline select { min-width: 0; width: 100%; }
+.paysub select { width: auto; }
+.menu .payline input.payn { width: 100%; text-align: center; padding: 5px 4px; }
+.menu .payline input.paypct { width: 100%; text-align: right; padding: 5px 4px; }
+.pctwrap { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: var(--muted); }
+.paywhen { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.payline .iconbtn { width: 30px; height: 30px; }
+.payfoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.paybox > .btn { justify-self: start; }
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -834,6 +854,72 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   const countLabel = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+  // ---------- Datas de recebimento ----------
+  // Uma tabela de entradas pode ter "pay": { on, sat, parts: [{ id, type: "util"|"dia", n, pct, adjust }] }.
+  // Ligado, cada valor lançado nela é dividido nas parcelas (ex.: 60% no 5º dia útil e 40% no dia 20),
+  // e cada parcela vira um registro com o dia em que cai naquele mês ("day") e a regra de origem ("part").
+  const PAY_MAX = 6;
+  const newPay = () => ({ on: true, sat: false, parts: [
+    { id: uid(), type: "util", n: 5, pct: 60, adjust: "antes" },
+    { id: uid(), type: "dia", n: 20, pct: 40, adjust: "antes" },
+  ] });
+  const payOn = (c) => !!(c && c.pay && c.pay.on && c.pay.parts && c.pay.parts.length);
+  const partLabel = (p) => p.type === "util" ? `${p.n}º dia útil` : `dia ${p.n}`;
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const daysIn = (monthId) => { const [y, m] = monthId.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+  // Feriados nacionais (fixos + Sexta-feira Santa, que depende da Páscoa)
+  const holidayCache = {};
+  function holidays(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const easter = new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+    const friday = new Date(easter); friday.setDate(easter.getDate() - 2);
+    const set = new Set(["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "12-25", `${pad2(friday.getMonth() + 1)}-${pad2(friday.getDate())}`]);
+    if (y >= 2024) set.add("11-20");   // Consciência Negra virou feriado nacional em 2024
+    return (holidayCache[y] = set);
+  }
+  function isWorkday(monthId, day, sat) {
+    const [y, m] = monthId.split("-").map(Number);
+    const wd = new Date(y, m - 1, day).getDay();
+    if (wd === 0 || (wd === 6 && !sat)) return false;
+    return !holidays(y).has(`${pad2(m)}-${pad2(day)}`);
+  }
+  // Dia do mês em que a parcela cai
+  function payDay(monthId, p, sat) {
+    const last = daysIn(monthId);
+    if (p.type === "util") {
+      let n = 0;
+      for (let d = 1; d <= last; d++) if (isWorkday(monthId, d, sat) && ++n === p.n) return d;
+      return last;
+    }
+    const d = Math.min(p.n, last);
+    if (p.adjust === "manter" || isWorkday(monthId, d, sat)) return d;
+    const first = p.adjust === "depois" ? 1 : -1;
+    for (const step of [first, -first]) for (let x = d + step; x >= 1 && x <= last; x += step) if (isWorkday(monthId, x, sat)) return x;
+    return d;
+  }
+  // Divide em centavos: cada parcela leva a sua porcentagem e a última fica com o arredondamento
+  function splitValue(value, parts) {
+    const cents = Math.round(value * 100);
+    let used = 0;
+    return parts.map((p, i) => {
+      const c = i === parts.length - 1 ? cents - used : Math.round(cents * p.pct / 100);
+      used += c;
+      return c / 100;
+    });
+  }
+  // Registros de uma entrada já divididos pelas datas da tabela (ou um só, se a tabela não divide)
+  function splitEntry(monthId, c, base) {
+    if (!payOn(c)) return [base];
+    const vals = splitValue(base.value, c.pay.parts);
+    return c.pay.parts.map((p, i) => ({ ...base, id: i ? uid() : base.id, value: vals[i], day: payDay(monthId, p, c.pay.sat), part: p.id, at: (base.at || Date.now()) + i }))
+      .filter(e => e.value > 0);
+  }
+  const partOf = (c, e) => c && c.pay && e.part ? c.pay.parts.find(p => p.id === e.part) : null;
+  const dayLabel = (monthId, day) => `${pad2(day)}/${monthId.slice(5)}`;
+
   function afterLoad() {
     if (!state.selected || !state.months[state.selected]) {
       const ids = monthIds(), cur = currentMonthId();
@@ -898,6 +984,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // Registros cuja tabela não existe mais (sobras de exclusões antigas ou de conflitos entre aparelhos)
   const orphans = (kind) => entries().filter(e => e.kind === kind && !ctxs(kind).some(c => c.id === e.ctx));
 
+  // Entrada com data já caiu? (mês passado: sim; mês futuro: não; mês atual: compara com hoje)
+  function isPaid(e) {
+    if (!e.day || !state.selected) return false;
+    const cur = currentMonthId();
+    return state.selected < cur || (state.selected === cur && e.day <= new Date().getDate());
+  }
+  // "R$ 3.000,00 já caiu · dia 20: R$ 2.000,00" no resumo, quando as entradas têm data
+  function incomeTimeline(es) {
+    const dated = es.filter(e => e.kind === "income" && e.day);
+    if (!dated.length || state.selected < currentMonthId()) return "";
+    const paid = sumMoney(dated.filter(isPaid).map(e => e.value));
+    const next = dated.filter(e => !isPaid(e)).map(e => e.day).sort((a, b) => a - b)[0];
+    if (!next) return "Tudo recebido";
+    const nextSum = sumMoney(dated.filter(e => e.day === next).map(e => e.value));
+    return (paid > 0 ? `${fmt(paid)} já caiu · ` : "") + `dia ${next}: ${fmt(nextSum)}`;
+  }
+
   function renderSummary() {
     const es = entries();
     const tin = sumMoney(es.filter(e => e.kind === "income").map(e => e.value));
@@ -907,7 +1010,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("fOut").textContent = fmt(tout);
     $("fLeft").textContent = fmt(left);
     $("fLeft").className = "big" + (left < 0 ? " neg" : "");
-    $("fInSub").textContent = countLabel(es.filter(e => e.kind === "income").length, "entrada", "entradas");
+    $("fInSub").textContent = incomeTimeline(es) || countLabel(es.filter(e => e.kind === "income").length, "entrada", "entradas");
     $("fOutSub").textContent = tin > 0 ? `${Math.round(tout / tin * 100)}% do que entrou` : countLabel(es.filter(e => e.kind === "expense").length, "saída", "saídas");
     $("fLeftSub").textContent = left < 0 ? "Gastou mais do que ganhou" : tin > 0 ? `${Math.round(left / tin * 100)}% da renda livre` : "Registre uma entrada para ver o saldo";
 
@@ -948,7 +1051,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function card(kind, c, sum, base) {
     const k = colorOf(kind, c);
-    const items = entries().filter(e => e.ctx === c.id);
+    // com datas de recebimento, os registros aparecem na ordem em que caem no mês
+    const items = entries().filter(e => e.ctx === c.id).map((e, i) => [e, i])
+      .sort(([a, i], [b, j]) => (a.day || 99) - (b.day || 99) || i - j).map(([e]) => e);
     const share = base > 0 ? Math.min(sum / base * 100, 100) : 0;
     const draft = state.drafts[c.id] || { name: "", value: "" };
     const menuOpen = state.menu === c.id;
@@ -957,17 +1062,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const head = el("div", { class: "card-head" },
       canMove ? el("button", { class: "drag-handle", type: "button", tabindex: "-1", "aria-hidden": "true", title: "Arraste para mover", onpointerdown: (ev) => startDrag(ev, kind, c.id) }, "⠿") : el("span"),
       el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name),
-        isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null),
+        isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null,
+        payOn(c) ? payBadge(c) : null),
       el("span", { class: "card-total" }, fmt(sum)),
       el("button", { class: "iconbtn trash", "aria-label": `Excluir a tabela ${c.name}`, title: "Excluir tabela", onclick: () => deleteCtx(kind, c.id) }, trashIcon()),
-      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; render(); } }, "⋯"));
+      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; state.payDraft = null; render(); } }, "⋯"));
 
     const rows = items.length
       ? el("ul", { class: "rows" }, ...items.map(e => row(e)))
       : el("div", { class: "empty-rows" }, kind === "income" ? "Nenhuma entrada neste mês." : "Nenhum gasto neste mês.");
 
     // linha de inclusão
-    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? "Nova entrada" : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
+    const splitN = payOn(c) && c.pay.parts.length > 1 ? c.pay.parts.length : 0;
+    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (divide em ${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
     const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: "0,00", "aria-label": `Valor em ${c.name}`, value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
     const err = el("p", { class: "adder-err", hidden: true });
@@ -979,10 +1086,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const name = nameIn.value.trim(), value = parseMoney(valIn.value);
       if (!name) { err.textContent = "Escreva o nome do item."; err.hidden = false; nameIn.focus(); return; }
       if (!(value > 0)) { err.textContent = "Valor inválido. Use por exemplo 45,90."; err.hidden = false; valIn.focus(); return; }
-      state.months[state.selected].entries.push({ id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
+      const added = splitEntry(state.selected, c, { id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
+      state.months[state.selected].entries.push(...added);
       delete state.drafts[c.id];
       store.saveMonth(state.selected);
-      hist.label(`"${name}" adicionado em ${c.name}`);
+      hist.label(`"${name}" adicionado em ${c.name}` + (added.length > 1 ? `, dividido em ${added.length} datas` : ""));
       state.focusAdder = c.id;
       render();
     } }, nameIn, valIn, addBtn, err);
@@ -1000,26 +1108,36 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (editing) {
       const n = el("input", { type: "text", value: e.name, maxlength: "120", "aria-label": "Nome" });
       const v = el("input", { class: "val", inputmode: "decimal", value: fmtPlain(e.value), "aria-label": "Valor" });
+      // entradas têm o dia em que caem (vazio = sem data)
+      const dIn = e.kind === "income" ? el("input", { class: "day", type: "number", min: "1", max: String(daysIn(state.selected)), inputmode: "numeric", placeholder: "dia", value: e.day ? String(e.day) : "", "aria-label": "Dia do recebimento", title: "Dia em que o dinheiro cai (vazio = sem data)" }) : null;
       let done = false;
       const commit = (save) => {
         if (done) return; done = true;
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
-          if (t && name && value > 0 && (name !== t.name || value !== t.value)) { t.name = name; t.value = value; store.saveMonth(state.selected); hist.label(`"${name}" editado`); }
+          let day = t ? t.day : undefined;
+          if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= daysIn(state.selected) ? dv : undefined; }
+          if (t && name && value > 0 && (name !== t.name || value !== t.value || day !== t.day)) {
+            if (day !== t.day) { delete t.part; if (day) t.day = day; else delete t.day; }   // dia escolhido à mão deixa de seguir a regra
+            t.name = name; t.value = value;
+            store.saveMonth(state.selected); hist.label(`"${name}" editado`);
+          }
         }
         state.edit = null; render();
       };
       const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); };
-      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys);
-      const li = el("li", { class: "row" }, n, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
+      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); if (dIn) dIn.addEventListener("keydown", keys);
+      const li = el("li", { class: "row" + (dIn ? " with-day" : "") }, n, dIn, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
       li.addEventListener("focusout", () => setTimeout(() => { if (!li.contains(document.activeElement)) commit(true); }, 0));
       requestAnimationFrame(() => { const t = state.edit && state.edit.field === "value" ? v : n; t.focus(); t.select(); });
       return li;
     }
     const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
+    const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
+    const chip = e.day ? el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day)) : null;
     return el("li", { class: "row" },
-      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name),
+      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name, chip),
       el("button", { class: "cell val", title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
       el("button", { class: "iconbtn del", "aria-label": `Remover ${e.name}`, title: "Remover", onclick: () => removeEntry(e.id) }, "×"));
   }
@@ -1047,9 +1165,88 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("span", { class: "small" }, "Cor"), swatches,
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); hist.label(`"${t.name}" ${t.repeat ? "passou a repetir" : "deixou de repetir"} no próximo mês`); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
+      kind === "income" ? payMenu(c) : null,
       el("div", { class: "menu-actions" },
         el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
         el("button", { class: "btn solid", onclick: save }, "Concluir")));
+  }
+
+  // Bloco "Datas de recebimento" no menu ⋯ das tabelas de entradas.
+  // As mudanças ficam num rascunho (state.payDraft) e só são gravadas quando as porcentagens somam 100%.
+  const fmtPct = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")}%`;
+  function payMenu(c) {
+    const cur = () => ctxs("income").find(x => x.id === c.id) || c;
+    if (!state.payDraft || state.payDraft.ctx !== c.id) state.payDraft = { ctx: c.id, pay: clone(c.pay) || null };
+    const d = state.payDraft;
+    const pctSum = (p) => p.parts.reduce((s, x) => s + Math.round(x.pct * 100), 0) / 100;
+    const changed = `Datas de recebimento de "${c.name}" alteradas`;
+    const commit = (label) => {
+      if (d.pay && Math.abs(pctSum(d.pay) - 100) > 0.001) { render(); return; }   // ainda não fecha 100%: só redesenha
+      const t = cur();
+      if (sameJson(t.pay || null, d.pay)) { render(); return; }
+      t.pay = clone(d.pay);
+      store.saveSettings(); hist.label(label || changed); render();
+    };
+    const toggle = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!(d.pay && d.pay.on)), onclick: () => {
+      if (!d.pay) d.pay = newPay(); else d.pay.on = !d.pay.on;
+      commit(`Datas de recebimento de "${c.name}" ${d.pay.on ? "ligadas" : "desligadas"}`);
+    } }, el("span", { class: "box" }, "✓"), "Dividir em datas de recebimento");
+    if (!d.pay || !d.pay.on) return el("div", { class: "paybox" }, toggle,
+      el("p", { class: "small" }, "Ex.: salário com 60% no 5º dia útil e 40% no dia 20. Cada valor lançado é dividido nas datas."));
+
+    const p = d.pay, mid = state.selected;
+    const lines = p.parts.map((x, i) => {
+      const set = (k, v) => { x[k] = v; commit(); };
+      const type = el("select", { "aria-label": "Tipo de data", onchange: (ev) => { x.type = ev.target.value; x.n = Math.min(x.n, x.type === "util" ? 23 : 31); commit(); } },
+        el("option", { value: "util" }, "dia útil"), el("option", { value: "dia" }, "dia fixo"));
+      type.value = x.type;
+      const n = el("input", { class: "payn", type: "number", min: "1", max: x.type === "util" ? "23" : "31", value: String(x.n), "aria-label": x.type === "util" ? "Qual dia útil" : "Dia do mês",
+        onchange: (ev) => { const v = parseInt(ev.target.value, 10); if (v >= 1 && v <= (x.type === "util" ? 23 : 31)) set("n", v); else render(); } });
+      const pct = el("input", { class: "paypct", type: "text", inputmode: "decimal", value: String(x.pct).replace(".", ","), "aria-label": "Porcentagem",
+        onchange: (ev) => { const v = Number(String(ev.target.value).replace("%", "").replace(",", ".").trim()); if (ev.target.value.trim() !== "" && v >= 0 && v <= 100) set("pct", Math.round(v * 100) / 100); else render(); } });
+      const adjust = x.type === "dia" ? el("select", { "aria-label": "Se cair em fim de semana ou feriado", title: "Se cair em fim de semana ou feriado", onchange: (ev) => set("adjust", ev.target.value) },
+        el("option", { value: "antes" }, "antecipa"), el("option", { value: "depois" }, "adia"), el("option", { value: "manter" }, "mantém")) : null;
+      if (adjust) adjust.value = x.adjust || "antes";
+      const when = mid ? el("span", { class: "paywhen num", title: `Em ${monthLabel(mid)}` }, "→ " + dayLabel(mid, payDay(mid, x, p.sat))) : null;
+      const del = p.parts.length > 1 ? el("button", { class: "iconbtn", type: "button", "aria-label": `Remover ${partLabel(x)}`, title: "Remover data", onclick: () => {
+        p.parts.splice(i, 1);
+        if (p.parts.length === 1) p.parts[0].pct = 100;
+        commit();
+      } }, "×") : null;
+      return el("div", { class: "payline" }, type, n, el("span", { class: "pctwrap" }, pct, "%"), del || el("span"),
+        el("div", { class: "paysub" }, adjust, when));
+    });
+    const sum = pctSum(p);
+    const add = p.parts.length < PAY_MAX ? el("button", { class: "btn", type: "button", onclick: () => {
+      const rest = Math.max(0, Math.round((100 - sum) * 100) / 100);
+      p.parts.push({ id: uid(), type: "dia", n: 15, pct: rest, adjust: "antes" });
+      commit();
+    } }, "+ Data") : null;
+    const sat = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!p.sat), title: "Pela CLT o sábado conta como dia útil para o pagamento do salário; muitas empresas contam só de segunda a sexta", onclick: () => { p.sat = !p.sat; commit(`Sábado ${p.sat ? "passou a contar" : "deixou de contar"} como dia útil em "${c.name}"`); } },
+      el("span", { class: "box" }, "✓"), "Sábado conta como dia útil");
+    // registros deste mês lançados antes de ligar a divisão
+    const loose = mid && state.months[mid] ? state.months[mid].entries.filter(e => e.ctx === c.id && !e.part) : [];
+    const ready = Math.abs(sum - 100) < 0.001 && sameJson(cur().pay || null, p);
+    const splitNow = loose.length && ready ? el("button", { class: "btn", type: "button", onclick: () => {
+      const t = cur();
+      state.months[mid].entries = state.months[mid].entries.flatMap(e => e.ctx === c.id && !e.part ? splitEntry(mid, t, e) : [e]);
+      store.saveMonth(mid); hist.label(`${countLabel(loose.length, "item dividido", "itens divididos")} em "${c.name}"`);
+      state.menu = null; state.payDraft = null; render();
+    } }, `Dividir ${loose.length === 1 ? "o item" : `os ${loose.length} itens`} deste mês nas datas`) : null;
+    return el("div", { class: "paybox" }, toggle,
+      el("span", { class: "small" }, `Datas de recebimento${mid ? ` (→ dia em ${monthLabel(mid)})` : ""}`),
+      ...lines,
+      el("div", { class: "payfoot" }, add, sat),
+      Math.abs(sum - 100) > 0.001 ? el("p", { class: "warn" }, `As porcentagens somam ${fmtPct(sum)}: ajuste para dar 100% (a mudança só é salva assim).`) : null,
+      splitNow);
+  }
+
+  // Ícone de calendário no título da tabela, com o número de datas (detalhes no title)
+  function payBadge(c) {
+    const b = el("b", { class: "repeat paybadge", title: "Recebe em: " + c.pay.parts.map(p => `${partLabel(p)} (${fmtPct(p.pct)})`).join(" + "), "aria-label": `Recebe em ${countLabel(c.pay.parts.length, "data", "datas")}` });
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+    if (c.pay.parts.length > 1) b.append(String(c.pay.parts.length));
+    return b;
   }
 
   function trashIcon() {
@@ -1390,7 +1587,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (!/^\d{4}-\d{2}$/.test(id)) { $("nmMsg").textContent = "Escolha um mês."; return; }
     if (!state.months[id]) {
       const srcs = copySources(id), now = Date.now();
-      const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => ({ ...e, id: uid(), at: now + i })));
+      const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
+        const o = { ...e, id: uid(), at: now + i };
+        // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
+        const c = findCtx(e.ctx)[1], p = partOf(c, e);
+        if (p) o.day = payDay(id, p, c.pay.sat);
+        else if (o.day) { o.day = Math.min(o.day, daysIn(id)); delete o.part; }
+        return o;
+      }));
       state.months[id] = { entries: copied };
       store.saveMonth(id);
       hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : ""));
