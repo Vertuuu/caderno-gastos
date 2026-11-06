@@ -409,16 +409,17 @@
     // mês mais recente do período visto: ao trocar Mês/Semestre/Ano, o período escolhido continua o mesmo
     const anchor = cs.period === "month" ? cs.key : (months[months.length - 1] || api.state.selected || ids[ids.length - 1]);
 
-    // Filtros (uma linha acima dos gráficos)
-    const keySel = el("select", { id: "cKey", "aria-label": "Período", onchange: (e) => update({ key: e.target.value }) },
+    // Filtros acima dos gráficos: o seletor do período exibido sozinho na primeira linha, os botões embaixo
+    const keySel = el("select", { id: "cKey", class: "ckey", "aria-label": "Período exibido", onchange: (e) => update({ key: e.target.value }) },
       ...opts.map(k => el("option", { value: k }, periodLabel(k, cs.period))));
     keySel.value = cs.key;
     const filters = el("div", { class: "cfilters" },
-      el("div", { class: "cfield" }, el("span", { class: "clab" }, "Período"),
-        seg("Período", cs.period, [["month", "Mês"], ["semester", "Semestre"], ["year", "Ano"]], (v) => update({ period: v, key: periodOf(anchor, v) })),
-        keySel),
-      el("div", { class: "cfield" }, el("span", { class: "clab" }, "Dados"),
-        seg("Dados", mode, [["expense", "Gastos"], ["income", "Entradas"], ["all", "Geral"]], (v) => update({ data: v }))));
+      keySel,
+      el("div", { class: "crow" },
+        el("div", { class: "cfield" }, el("span", { class: "clab" }, "Período"),
+          seg("Período", cs.period, [["month", "Mês"], ["semester", "Semestre"], ["year", "Ano"]], (v) => update({ period: v, key: periodOf(anchor, v) }))),
+        el("div", { class: "cfield" }, el("span", { class: "clab" }, "Dados"),
+          seg("Dados", mode, [["expense", "Gastos"], ["income", "Entradas"], ["all", "Geral"]], (v) => update({ data: v })))));
 
     // KPIs
     const kpi = (label, value, sub, tone, d, goodWhenUp) => {
@@ -512,7 +513,7 @@
 
     const empty = !months.length;
     root.replaceChildren(
-      el("div", { class: "chartshead" }, el("h2", {}, "Gráficos"), el("p", {}, periodLabel(cs.key, cs.period))),
+      el("div", { class: "chartshead" }, el("h2", {}, "Gráficos")),
       filters,
       empty ? el("p", { class: "cempty" }, "Nenhum mês registrado neste período.") : kpis,
       empty ? null : el("div", { class: "cgrid" }, compCard, insCard),
