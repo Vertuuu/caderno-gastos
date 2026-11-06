@@ -151,6 +151,14 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para pôr ou tirar a data de qualquer entrada clicando nela para editar.
 - O botão **Dividir os itens deste mês** aplica a divisão ao que já foi lançado antes de ligar a opção.
 
+### Vencimento das contas
+
+- Em qualquer **saída**, clique no item e preencha o campo **venc.** com o dia em que a conta vence todo mês (ex.: Aluguel dia 5). Deixe vazio para tirar o vencimento.
+- A conta ganha uma **bolinha para marcar como paga** e um selo com a situação: **venceu**, **vence hoje**, **vence amanhã / em N dias** (até 3 dias antes), **vence dd/mm** ou **paga**. Os itens aparecem na ordem de vencimento.
+- Se o vencimento cai em **fim de semana ou feriado**, vale o próximo dia útil, como num boleto (passe o mouse no selo para ver).
+- No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
+- Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
+
 ### Meses
 
 - **Novo mês** com cópia automática dos itens das tabelas marcadas para repetir (por padrão, Gastos Fixos e Salário). Na hora de criar, dá para escolher quais copiar.

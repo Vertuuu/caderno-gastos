@@ -235,13 +235,14 @@ function cleanMonth(b) {
   if (!isObj(b) || !Array.isArray(b.entries) || b.entries.length > 5000) return null;
   if (!b.entries.every(e => isObj(e) && isStr(e.id, 40) && (e.kind === "expense" || e.kind === "income") && isStr(e.ctx, 40) &&
     isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
-    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)))) return null;
+    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid))) return null;
   if (!uniqueIds(b.entries)) return null;
   return { entries: b.entries.map(e => {
     const o = { id: e.id, kind: e.kind, ctx: e.ctx, name: e.name, value: e.value };
     if (e.at !== undefined) o.at = e.at;
     if (e.day !== undefined) o.day = e.day;
     if (e.part !== undefined) o.part = e.part;
+    if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
     return o;
   }) };
 }

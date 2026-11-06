@@ -33,6 +33,7 @@
   --earn-soft: #d9f0e5;
   --spend: #d03b2a;
   --spend-soft: #fbe2dd;
+  --warn: #a35f00; --warn-soft: #fbedd3;
   --k0: #17855a; --k1: #d03b2a; --k2: #2f5bd3; --k3: #b86a00; --k4: #8a3fc7; --k5: #0b8287; --k6: #a34d22; --k7: #577a12; --k8: #c4256f; --k9: #4a5670;
   /* cartões: cabeçalho sólido na cor do contexto */
   --head-mix: 100%;
@@ -50,7 +51,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
     --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
-    --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18;
+    --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
     --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
     --head-mix: 16%; --head-ink: #e6e9f3; --total-k: 100%; --card-k: 0%; --row-k: 0%;
     --shadow: 0 1px 0 rgb(0 0 0 / .3), 0 8px 22px -10px rgb(0 0 0 / .6);
@@ -60,7 +61,7 @@
 :root[data-theme="dark"] {
   --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
   --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
-  --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18;
+  --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
   --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
   --head-mix: 16%; --head-ink: #e6e9f3; --total-k: 100%; --card-k: 0%; --row-k: 0%;
   --shadow: 0 1px 0 rgb(0 0 0 / .3), 0 8px 22px -10px rgb(0 0 0 / .6);
@@ -232,6 +233,32 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .payline .iconbtn { width: 30px; height: 30px; }
 .payfoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .paybox > .btn { justify-self: start; }
+.row.has-check { grid-template-columns: 26px minmax(0, 1fr) auto 30px; padding-left: 8px; }
+.paycheck { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--faint); background: transparent; color: transparent; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }
+.paycheck:hover { border-color: var(--earn); color: color-mix(in srgb, var(--earn) 60%, transparent); }
+.paycheck[aria-pressed="true"] { background: var(--earn); border-color: var(--earn); color: #fff; }
+.row.is-paid .cell.name { color: var(--muted); }
+.daychip.due-paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
+.daychip.due-late { color: var(--spend); border-color: color-mix(in srgb, var(--spend) 50%, transparent); background: var(--spend-soft); font-weight: 600; }
+.daychip.due-today, .daychip.due-soon { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); background: var(--warn-soft); font-weight: 600; }
+.alerts { border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface)); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; }
+.alerts[data-level="late"] { border-color: color-mix(in srgb, var(--spend) 45%, var(--line)); background: color-mix(in srgb, var(--spend-soft) 55%, var(--surface)); }
+.alerts-title { margin: 0; font-weight: 600; font-size: 14px; }
+.alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.alerts li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.alerts li:first-child { border-top: 0; }
+.alerts .a-name { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.alerts .a-name small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.alerts .a-val { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.alerts .daychip { margin: 0; }
+.alerts .btn { padding: 4px 10px; font-size: 13px; }
+@media (max-width: 640px) {
+  .alerts li { grid-template-columns: minmax(0, 1fr) auto; }
+  .alerts .a-name { grid-area: 1 / 1; }
+  .alerts .a-val { grid-area: 1 / 2; justify-self: end; }
+  .alerts .daychip { grid-area: 2 / 1; justify-self: start; }
+  .alerts .btn { grid-area: 2 / 2; justify-self: end; }
+}
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -437,6 +464,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <button class="btn ghost" id="clearMonth" title="Apaga todos os itens deste mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Limpar registros</button>
       <button class="btn ghost danger" id="deleteMonth" title="Remove o mês e seus registros"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 14l4 4M14 14l-4 4"/></svg>Excluir mês</button>
     </div>
+
+    <section class="alerts" id="alerts" hidden aria-label="Contas a vencer" aria-live="polite"></section>
 
     <section class="summary" id="summary" aria-label="Resumo do mês">
       <div class="figures">
@@ -920,6 +949,33 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const partOf = (c, e) => c && c.pay && e.part ? c.pay.parts.find(p => p.id === e.part) : null;
   const dayLabel = (monthId, day) => `${pad2(day)}/${monthId.slice(5)}`;
 
+  // ---------- Vencimento das contas ----------
+  // Numa saída, "day" é o dia do vencimento e "paid" marca a conta como paga. Se o vencimento cai em
+  // fim de semana ou feriado, a conta pode ser paga no próximo dia útil sem atraso (como boleto).
+  const SOON_DAYS = 3;
+  const dueDay = (monthId, day) => payDay(monthId, { type: "dia", n: day, adjust: "depois" }, false);
+  // paid | late | today | soon | later (mês atual) · past | future (outros meses)
+  function dueState(monthId, e) {
+    if (e.paid) return "paid";
+    const cur = currentMonthId();
+    if (monthId !== cur) return monthId < cur ? "past" : "future";
+    const t = new Date().getDate(), d = dueDay(monthId, e.day);
+    return d < t ? "late" : d === t ? "today" : d - t <= SOON_DAYS ? "soon" : "later";
+  }
+  function dueText(monthId, e, st) {
+    const d = dueDay(monthId, e.day), left = d - new Date().getDate();
+    if (st === "paid") return "paga";
+    if (st === "late") return `venceu ${dayLabel(monthId, d)}`;
+    if (st === "today") return "vence hoje";
+    if (st === "soon") return left === 1 ? "vence amanhã" : `vence em ${left} dias`;
+    return `vence ${dayLabel(monthId, d)}`;
+  }
+  function dueTitle(monthId, e) {
+    const d = dueDay(monthId, e.day);
+    const moved = d !== e.day ? ` O dia ${e.day} cai em fim de semana ou feriado: dá para pagar até ${dayLabel(monthId, d)}.` : "";
+    return `Vence todo dia ${e.day}.${moved}${e.paid ? " Já paga." : ""}`;
+  }
+
   function afterLoad() {
     if (!state.selected || !state.months[state.selected]) {
       const ids = monthIds(), cur = currentMonthId();
@@ -944,7 +1000,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("goals").hidden = view !== "goals";
     if (view !== "lanc") {
       $("newMonthSheet").hidden = true;
-      ["welcome", "summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = true);
+      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts"].forEach(id => $(id).hidden = true);
       document.title = `${view === "charts" ? "Gráficos" : "Metas"} · Caderno de Gastos`;
       if (store.ready && view === "charts" && window.renderCharts) window.renderCharts(chartsApi);
       if (store.ready && view === "goals" && window.renderGoals) window.renderGoals(chartsApi);
@@ -955,7 +1011,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     ["summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = !has);
     if (has) $("clearMonth").disabled = entries().length === 0;
     renderNav();
-    if (has) { renderSummary(); renderBoard("income"); renderBoard("expense"); }
+    if (has) { renderAlerts(); renderSummary(); renderBoard("income"); renderBoard("expense"); } else $("alerts").hidden = true;
     if (state.focusAdder) {
       const inp = document.querySelector(`.adder[data-ctx="${state.focusAdder}"] input`);
       if (inp) inp.focus();
@@ -1001,6 +1057,39 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return (paid > 0 ? `${fmt(paid)} já caiu · ` : "") + `dia ${next}: ${fmt(nextSum)}`;
   }
 
+  // "R$ 1.680,00 a pagar · 1 vencida" no resumo (mês atual e futuros)
+  function billsSummary(es) {
+    const mid = state.selected;
+    if (!mid || mid < currentMonthId()) return "";
+    const bills = es.filter(e => e.kind === "expense" && e.day);
+    if (!bills.length) return "";
+    const open = bills.filter(e => !e.paid);
+    if (!open.length) return "contas pagas";
+    const late = open.filter(e => dueState(mid, e) === "late").length;
+    return `${fmt(sumMoney(open.map(e => e.value)))} a pagar` + (late ? ` · ${countLabel(late, "vencida", "vencidas")}` : "");
+  }
+
+  // Faixa de lembrete no topo: contas do mês atual vencidas ou vencendo nos próximos dias
+  function renderAlerts() {
+    const box = $("alerts"), mid = state.selected;
+    const list = mid === currentMonthId() ? entries().filter(e => e.kind === "expense" && e.day && ["late", "today", "soon"].includes(dueState(mid, e))) : [];
+    box.hidden = !list.length;
+    if (!list.length) return box.replaceChildren();
+    list.sort((a, b) => dueDay(mid, a.day) - dueDay(mid, b.day));
+    const late = list.filter(e => dueState(mid, e) === "late").length;
+    box.dataset.level = late ? "late" : "soon";
+    box.replaceChildren(
+      el("p", { class: "alerts-title" }, late ? `${countLabel(late, "conta vencida", "contas vencidas")}` + (list.length > late ? ` e ${countLabel(list.length - late, "vencendo", "vencendo")}` : "") : `${countLabel(list.length, "conta vence", "contas vencem")} ${list.every(e => dueState(mid, e) === "today") ? "hoje" : "nos próximos dias"}`),
+      el("ul", {}, ...list.map(e => {
+        const st = dueState(mid, e), c = findCtx(e.ctx)[1];
+        return el("li", { class: `due-${st}` },
+          el("span", { class: "a-name" }, e.name, c ? el("small", {}, c.name) : null),
+          el("span", { class: "daychip due-" + st, title: dueTitle(mid, e) }, dueText(mid, e, st)),
+          el("span", { class: "a-val num" }, fmt(e.value)),
+          el("button", { class: "btn", type: "button", "aria-label": `Marcar ${e.name} como paga`, onclick: () => togglePaid(e.id, mid) }, "✓ Paga"));
+      })));
+  }
+
   function renderSummary() {
     const es = entries();
     const tin = sumMoney(es.filter(e => e.kind === "income").map(e => e.value));
@@ -1011,7 +1100,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("fLeft").textContent = fmt(left);
     $("fLeft").className = "big" + (left < 0 ? " neg" : "");
     $("fInSub").textContent = incomeTimeline(es) || countLabel(es.filter(e => e.kind === "income").length, "entrada", "entradas");
-    $("fOutSub").textContent = tin > 0 ? `${Math.round(tout / tin * 100)}% do que entrou` : countLabel(es.filter(e => e.kind === "expense").length, "saída", "saídas");
+    const bills = billsSummary(es);
+    $("fOutSub").textContent = (tin > 0 ? `${Math.round(tout / tin * 100)}% do que entrou` : countLabel(es.filter(e => e.kind === "expense").length, "saída", "saídas")) + (bills ? ` · ${bills}` : "");
     $("fLeftSub").textContent = left < 0 ? "Gastou mais do que ganhou" : tin > 0 ? `${Math.round(left / tin * 100)}% da renda livre` : "Registre uma entrada para ver o saldo";
 
     const byCtx = totalsBy("expense");
@@ -1109,7 +1199,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const n = el("input", { type: "text", value: e.name, maxlength: "120", "aria-label": "Nome" });
       const v = el("input", { class: "val", inputmode: "decimal", value: fmtPlain(e.value), "aria-label": "Valor" });
       // entradas têm o dia em que caem (vazio = sem data)
-      const dIn = e.kind === "income" ? el("input", { class: "day", type: "number", min: "1", max: String(daysIn(state.selected)), inputmode: "numeric", placeholder: "dia", value: e.day ? String(e.day) : "", "aria-label": "Dia do recebimento", title: "Dia em que o dinheiro cai (vazio = sem data)" }) : null;
+      // nas saídas, o dia do vencimento
+      const isIn = e.kind === "income";
+      const dIn = el("input", { class: "day", type: "number", min: "1", max: String(daysIn(state.selected)), inputmode: "numeric", placeholder: isIn ? "dia" : "venc.", value: e.day ? String(e.day) : "",
+        "aria-label": isIn ? "Dia do recebimento" : "Dia do vencimento", title: isIn ? "Dia em que o dinheiro cai (vazio = sem data)" : "Dia em que a conta vence, todo mês (vazio = sem vencimento)" });
       let done = false;
       const commit = (save) => {
         if (done) return; done = true;
@@ -1119,7 +1212,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
           let day = t ? t.day : undefined;
           if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= daysIn(state.selected) ? dv : undefined; }
           if (t && name && value > 0 && (name !== t.name || value !== t.value || day !== t.day)) {
-            if (day !== t.day) { delete t.part; if (day) t.day = day; else delete t.day; }   // dia escolhido à mão deixa de seguir a regra
+            if (day !== t.day) { delete t.part; if (day) t.day = day; else { delete t.day; delete t.paid; } }   // dia escolhido à mão deixa de seguir a regra
             t.name = name; t.value = value;
             store.saveMonth(state.selected); hist.label(`"${name}" editado`);
           }
@@ -1135,8 +1228,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     }
     const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
     const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
-    const chip = e.day ? el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day)) : null;
-    return el("li", { class: "row" },
+    let chip = null, check = null;
+    if (e.day && e.kind === "income") chip = el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day));
+    else if (e.day) {
+      const st = dueState(state.selected, e);
+      chip = el("span", { class: `daychip due-${st}`, title: dueTitle(state.selected, e) }, dueText(state.selected, e, st));
+      check = el("button", { class: "paycheck", type: "button", "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
+    }
+    return el("li", { class: "row" + (check ? " has-check" : "") + (e.paid ? " is-paid" : "") }, check,
       el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name, chip),
       el("button", { class: "cell val", title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
       el("button", { class: "iconbtn del", "aria-label": `Remover ${e.name}`, title: "Remover", onclick: () => removeEntry(e.id) }, "×"));
@@ -1320,6 +1419,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
 
   // ---------- Ações ----------
+  function togglePaid(id, mid = state.selected) {
+    const t = state.months[mid] && state.months[mid].entries.find(x => x.id === id);
+    if (!t) return;
+    if (t.paid) delete t.paid; else t.paid = true;
+    store.saveMonth(mid);
+    hist.label(`"${t.name}" ${t.paid ? "marcada como paga" : "desmarcada como paga"}`);
+    render();
+  }
   function removeEntry(id) {
     const mid = state.selected, list = state.months[mid].entries;
     const idx = list.findIndex(e => e.id === id);
@@ -1589,6 +1696,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const srcs = copySources(id), now = Date.now();
       const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
         const o = { ...e, id: uid(), at: now + i };
+        delete o.paid;                     // conta paga no mês passado volta a ficar em aberto
         // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
         const c = findCtx(e.ctx)[1], p = partOf(c, e);
         if (p) o.day = payDay(id, p, c.pay.sat);
