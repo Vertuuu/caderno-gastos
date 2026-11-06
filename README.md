@@ -159,6 +159,16 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
 - Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
 
+### Compras parceladas
+
+- Em qualquer tabela de **saídas**, clique em **Parcelar no cartão** abaixo do campo de lançamento. Digite o nome e o **valor total**, o número de parcelas e se a 1ª parcela cai **neste mês** ou no **próximo** (compra feita depois do fechamento da fatura). O dia de vencimento da fatura é opcional. Uma prévia mostra, por exemplo, "3x de R$ 333,33 (1ª de R$ 333,34) · de Nov 2026 a Jan 2027".
+- Cada mês ganha sozinho a parcela dele, como "Geladeira (2/3)", inclusive os meses criados depois. Os centavos que sobram da divisão ficam na 1ª parcela, como na fatura.
+- Parcelas não são copiadas junto com a tabela ao criar o mês, então nada sai duplicado.
+- A seção **Compras parceladas** lista o que ainda está sendo pago: a parcela do mês, quanto falta e quando termina.
+  - **Antecipar o resto** junta as parcelas que faltam num pagamento só, no mês aberto, e tira as parcelas dos meses seguintes.
+  - **Excluir compra** apaga a compra e todas as parcelas dela.
+- As parcelas com dia de vencimento entram nos lembretes de contas e na previsão do saldo.
+
 ### Previsão do saldo
 
 - Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".

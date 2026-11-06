@@ -309,6 +309,26 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .fc-fig.end { grid-column: 1 / -1; }
   .fc-fig .big { font-size: 19px; }
 }
+.instrow { grid-column: 1 / -1; display: grid; gap: 6px; }
+.adder .insttoggle { justify-self: start; background: transparent; color: var(--muted); border: 0; font-size: 12.5px; font-weight: 600; padding: 2px 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.adder .insttoggle:hover { color: var(--ink); }
+.instopts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--muted); }
+.instopts label { display: inline-flex; align-items: center; gap: 4px; }
+.adder .instopts input { width: 58px; text-align: center; padding: 5px 6px; border-style: solid; background: var(--surface); }
+.instopts select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.instprev { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); font-family: var(--f-num); }
+.instlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.inst { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--k); border-radius: 12px; background: var(--surface); }
+.inst-main { display: grid; gap: 5px; min-width: 0; }
+.inst-main b { overflow-wrap: anywhere; }
+.inst-bar { height: 6px; border-radius: 999px; background: var(--sunk); overflow: hidden; }
+.inst-bar i { display: block; height: 100%; border-radius: 999px; background: var(--k); }
+.inst-actions { display: grid; gap: 6px; justify-items: end; }
+.inst-actions .btn { padding: 4px 10px; font-size: 13px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .inst { grid-template-columns: minmax(0, 1fr); }
+  .inst-actions { grid-auto-flow: column; justify-content: start; }
+}
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -539,6 +559,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <div class="board" id="boardOut"></div>
     </section>
 
+    <section class="section sec-inst" id="secInst" hidden aria-labelledby="hInst"></section>
+
     <section id="charts" hidden aria-label="Gráficos"></section>
     <section id="goals" hidden aria-label="Metas"></section>
 
@@ -615,6 +637,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     focusAdder: null,    // ctxId para focar após render
     copySel: new Set(),
     goals: [],
+    plans: [],           // compras parceladas
+    instDraft: null,     // { ctx, n, start, day } enquanto o "Parcelar" está aberto num cartão
   };
 
   // ---------- Servidor ----------
@@ -649,6 +673,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function mergeDoc(key, base, local, remote) {
     if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []) };
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
+    if (key === "plans") return { plans: mergeById(base && base.plans, local.plans, remote ? remote.plans : []) };
     if (local === null) return null;                  // mês excluído aqui
     const entries = mergeById(base && base.entries, local.entries, remote ? remote.entries : []);
     // saldo inicial: vale o daqui se foi mudado aqui; se não, o de lá
@@ -659,17 +684,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function docGet(key) {
     if (key === "settings") return { expense: state.settings.expense, income: state.settings.income };
     if (key === "goals") return { goals: state.goals };
+    if (key === "plans") return { plans: state.plans };
     const m = state.months[key.slice(2)];
     return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
   }
   function docSet(key, doc) {
     if (key === "settings") state.settings = { expense: doc.expense, income: doc.income };
     else if (key === "goals") state.goals = doc.goals;
+    else if (key === "plans") state.plans = doc.plans;
     else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
     else delete state.months[key.slice(2)];
   }
-  const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : (d.months[key.slice(2)] || null);
-  const docUrl = (key) => key === "settings" ? "api/settings" : key === "goals" ? "api/goals" : `api/months/${key.slice(2)}`;
+  const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : key === "plans" ? { plans: d.plans || [] } : (d.months[key.slice(2)] || null);
+  const docUrl = (key) => key === "settings" ? "api/settings" : key === "goals" ? "api/goals" : key === "plans" ? "api/plans" : `api/months/${key.slice(2)}`;
 
   const store = {
     ready: false, rev: -1,
@@ -716,9 +743,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       this.heldSince = 0;
       this.rev = d.rev;
       d.months = d.months || {};
-      const keys = new Set(["settings", "goals", ...Object.keys(d.months).map(m => "m:" + m), ...Object.keys(state.months).map(m => "m:" + m)]);
+      const keys = new Set(["settings", "goals", "plans", ...Object.keys(d.months).map(m => "m:" + m), ...Object.keys(state.months).map(m => "m:" + m)]);
       for (const key of keys) {
-        const remote = docFromData(d, key) || (key === "settings" ? { expense: [], income: [] } : key === "goals" ? { goals: [] } : null);
+        const remote = docFromData(d, key) || (key === "settings" ? { expense: [], income: [] } : key === "goals" ? { goals: [] } : key === "plans" ? { plans: [] } : null);
         if (this.dirty.has(key)) docSet(key, mergeDoc(key, this.base[key], docGet(key), remote));
         else docSet(key, clone(remote));
         this.base[key] = clone(remote);
@@ -811,6 +838,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     saveSettings() { this.mark("settings"); },
     saveMonth(id) { this.mark("m:" + id); },
     saveGoals() { this.mark("goals"); },
+    savePlans() { this.mark("plans"); },
     deleteMonth(id) { this.mark("m:" + id); },   // o mês já saiu de state.months: o envio vira exclusão
   };
   function setStatus(s, text) { $("status").dataset.state = s; $("statusText").textContent = text; }
@@ -1004,6 +1032,38 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const partOf = (c, e) => c && c.pay && e.part ? c.pay.parts.find(p => p.id === e.part) : null;
   const dayLabel = (monthId, day) => `${pad2(day)}/${monthId.slice(5)}`;
 
+  // ---------- Compras parceladas ----------
+  // Uma compra (state.plans) vira um registro por mês: "Nome (k/n)", com { inst: { plan, k } }. As parcelas são
+  // escritas nos meses que já existem e, nos que ainda não existem, quando o mês for criado. A diferença dos
+  // centavos fica na 1ª parcela, como na fatura do cartão.
+  const monthsBetween = (a, b) => { const [ya, ma] = a.split("-").map(Number), [yb, mb] = b.split("-").map(Number); return (yb - ya) * 12 + mb - ma; };
+  const planK = (p, monthId) => monthsBetween(p.first, monthId) + 1;          // nº da parcela naquele mês
+  const planLast = (p) => shiftMonth(p.first, p.n - 1);
+  const planActive = (p, monthId) => { const k = planK(p, monthId); return k >= 1 && k <= p.n && (!p.until || monthId <= p.until); };
+  function instValue(p, k) {
+    const cents = Math.round(p.total * 100), each = Math.floor(cents / p.n);
+    return (k === 1 ? cents - each * (p.n - 1) : each) / 100;
+  }
+  const instLeft = (p, k) => sumMoney(Array.from({ length: Math.max(0, p.n - k) }, (_, i) => instValue(p, k + 1 + i)));   // depois da parcela k
+  function instEntry(p, monthId, at) {
+    const k = planK(p, monthId), e = { id: uid(), kind: "expense", ctx: p.ctx, name: `${p.name} (${k}/${p.n})`, value: instValue(p, k), at: at || Date.now(), inst: { plan: p.id, k } };
+    if (p.day) e.day = Math.min(p.day, daysIn(monthId));
+    return e;
+  }
+  // Escreve as parcelas que faltam nos meses que já existem; devolve os meses alterados
+  function materializePlan(p) {
+    const touched = [];
+    for (const m of monthIds()) {
+      if (!planActive(p, m)) continue;
+      const es = state.months[m].entries, k = planK(p, m);
+      if (es.some(e => e.inst && e.inst.plan === p.id && e.inst.k === k)) continue;
+      es.push(instEntry(p, m));
+      touched.push(m);
+    }
+    touched.forEach(m => store.saveMonth(m));
+    return touched;
+  }
+
   // ---------- Vencimento das contas ----------
   // Numa saída, "day" é o dia do vencimento e "paid" marca a conta como paga. Se o vencimento cai em
   // fim de semana ou feriado, a conta pode ser paga no próximo dia útil sem atraso (como boleto).
@@ -1055,7 +1115,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("goals").hidden = view !== "goals";
     if (view !== "lanc") {
       $("newMonthSheet").hidden = true;
-      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast"].forEach(id => $(id).hidden = true);
+      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast", "secInst"].forEach(id => $(id).hidden = true);
       document.title = `${view === "charts" ? "Gráficos" : "Metas"} · Caderno de Gastos`;
       if (store.ready && view === "charts" && window.renderCharts) window.renderCharts(chartsApi);
       if (store.ready && view === "goals" && window.renderGoals) window.renderGoals(chartsApi);
@@ -1066,7 +1126,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     ["summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = !has);
     if (has) $("clearMonth").disabled = entries().length === 0;
     renderNav();
-    if (has) { renderAlerts(); renderSummary(); renderForecast(); renderBoard("income"); renderBoard("expense"); } else $("alerts").hidden = $("forecast").hidden = true;
+    if (has) { renderAlerts(); renderSummary(); renderForecast(); renderBoard("income"); renderBoard("expense"); renderPlans(); } else $("alerts").hidden = $("forecast").hidden = $("secInst").hidden = true;
     if (state.focusAdder) {
       const inp = document.querySelector(`.adder[data-ctx="${state.focusAdder}"] input`);
       if (inp) inp.focus();
@@ -1436,17 +1496,62 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     // linha de inclusão
     const splitN = payOn(c) && c.pay.parts.length > 1 ? c.pay.parts.length : 0;
     const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (divide em ${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
-    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: "0,00", "aria-label": `Valor em ${c.name}`, value: draft.value });
+    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
     const err = el("p", { class: "adder-err", hidden: true });
     const sync = () => { state.drafts[c.id] = { name: nameIn.value, value: valIn.value }; };
     nameIn.addEventListener("input", sync); valIn.addEventListener("input", sync);
     nameIn.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !valIn.value) { ev.preventDefault(); valIn.focus(); } });
-    const adder = el("form", { class: "adder", "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
+    // "Parcelar no cartão" (só nas saídas): o valor digitado vira o total da compra
+    const inst = kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? state.instDraft : null;
+    let instBox = null;
+    if (kind === "expense") {
+      const toggle = el("button", { type: "button", class: "insttoggle", "aria-pressed": String(!!inst), "aria-expanded": String(!!inst), onclick: () => {
+        state.instDraft = inst ? null : { ctx: c.id, n: "10", start: "this", day: "" };
+        state.focusAdder = c.id; render();
+      } }, inst ? "× Lançamento comum" : "Parcelar no cartão");
+      if (!inst) instBox = el("div", { class: "instrow" }, toggle);
+      else {
+        const nIn = el("input", { class: "instn", type: "number", min: "2", max: "120", inputmode: "numeric", value: inst.n, "aria-label": "Número de parcelas" });
+        const start = el("select", { "aria-label": "Primeira parcela" }, el("option", { value: "this" }, "a partir deste mês"), el("option", { value: "next" }, "a partir do próximo mês"));
+        start.value = inst.start;
+        const dayIn = el("input", { class: "instday", type: "number", min: "1", max: "31", inputmode: "numeric", placeholder: "—", value: inst.day, "aria-label": "Dia do vencimento da fatura", title: "Dia em que a fatura vence (opcional)" });
+        const preview = el("p", { class: "instprev", "aria-live": "polite" });
+        const upd = () => {
+          inst.n = nIn.value; inst.start = start.value; inst.day = dayIn.value;
+          const n = parseInt(nIn.value, 10), total = parseMoney(valIn.value);
+          if (!(n >= 2 && n <= 120)) { preview.textContent = "De 2 a 120 parcelas."; return; }
+          if (!(total > 0)) { preview.textContent = "Digite o valor total da compra."; return; }
+          const first = start.value === "next" ? shiftMonth(state.selected, 1) : state.selected;
+          const p = { total, n, first };
+          const v1 = instValue(p, 1), vk = instValue(p, 2);
+          preview.textContent = `${n}x de ${fmt(vk)}` + (v1 !== vk ? ` (1ª de ${fmt(v1)})` : "") + ` · de ${shortMonthLabel(first)} a ${shortMonthLabel(planLast(p))}`;
+        };
+        [nIn, dayIn].forEach(i => i.addEventListener("input", upd)); start.addEventListener("change", upd); valIn.addEventListener("input", upd);
+        upd();
+        instBox = el("div", { class: "instrow on" }, toggle,
+          el("div", { class: "instopts" }, el("label", {}, nIn, "x"), start, el("label", { title: "Dia em que a fatura vence (opcional)" }, "vence dia ", dayIn)), preview);
+      }
+    }
+    const adder = el("form", { class: "adder" + (inst ? " inst" : ""), "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
       ev.preventDefault();
       const name = nameIn.value.trim(), value = parseMoney(valIn.value);
       if (!name) { err.textContent = "Escreva o nome do item."; err.hidden = false; nameIn.focus(); return; }
       if (!(value > 0)) { err.textContent = "Valor inválido. Use por exemplo 45,90."; err.hidden = false; valIn.focus(); return; }
+      if (inst) {
+        const n = parseInt(inst.n, 10), day = parseInt(inst.day, 10);
+        if (!(n >= 2 && n <= 120)) { err.textContent = "Número de parcelas: de 2 a 120."; err.hidden = false; return; }
+        const p = { id: uid(), name: name.slice(0, 100), ctx: c.id, total: value, n, first: inst.start === "next" ? shiftMonth(state.selected, 1) : state.selected, at: Date.now() };
+        if (day >= 1 && day <= 31) p.day = day;
+        state.plans = [...state.plans, p];
+        store.savePlans();
+        materializePlan(p);
+        delete state.drafts[c.id]; state.instDraft = null;
+        state.focusAdder = c.id;
+        render();
+        showToast(`"${name}" em ${n}x de ${fmt(instValue(p, 2))}` + (p.first !== state.selected ? `, a partir de ${monthLabel(p.first)}` : ""), 8000);
+        return;
+      }
       const added = splitEntry(state.selected, c, { id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
       state.months[state.selected].entries.push(...added);
       delete state.drafts[c.id];
@@ -1454,7 +1559,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       hist.label(`"${name}" adicionado em ${c.name}` + (added.length > 1 ? `, dividido em ${added.length} datas` : ""));
       state.focusAdder = c.id;
       render();
-    } }, nameIn, valIn, addBtn, err);
+    } }, nameIn, valIn, addBtn, err, instBox);
 
     return el("article", { class: "card", "data-id": c.id, style: `--k:${k}` },
       head,
@@ -1654,6 +1759,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       state.months[m].entries = es.filter(e => e.ctx !== id);
     }
     state.settings[kind] = list.filter(x => x.id !== id);
+    if (state.plans.some(p => p.ctx === id)) { state.plans = state.plans.filter(p => p.ctx !== id); store.savePlans(); }
     delete state.drafts[id];
     if (state.menu === id) state.menu = null;
     if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
@@ -1687,6 +1793,68 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("form", { onsubmit: (ev) => { ev.preventDefault(); add(input.value); } }, input, el("button", { class: "btn", type: "submit" }, "Criar")),
       err,
       sugg.length ? el("div", { class: "suggest" }, ...sugg.map(s => el("button", { type: "button", onclick: () => add(s) }, s))) : null);
+  }
+
+  // Seção "Compras parceladas": compras que ainda têm parcela no mês aberto ou depois dele
+  function renderPlans() {
+    const box = $("secInst"), mid = state.selected;
+    const list = state.plans.filter(p => findCtx(p.ctx)[1] && planLast(p) >= mid && (!p.until || p.until >= mid))
+      .sort((a, b) => planLast(a).localeCompare(planLast(b)) || a.name.localeCompare(b.name));
+    box.hidden = !list.length;
+    if (!list.length) return box.replaceChildren();
+    const monthly = sumMoney(list.filter(p => planActive(p, mid)).map(p => instValue(p, planK(p, mid))));
+    const owed = sumMoney(list.map(p => { const k = planK(p, mid); return k < 1 ? p.total : instLeft(p, k); }));
+    box.replaceChildren(
+      el("div", { class: "sec-head" }, el("h2", { id: "hInst" }, "Compras parceladas ", el("span", { class: "tag" }, String(list.length))),
+        el("span", { class: "small" }, `${fmt(monthly)} neste mês · ${fmt(owed)} nos próximos meses`)),
+      el("ul", { class: "instlist" }, ...list.map(p => {
+        const k = planK(p, mid), c = findCtx(p.ctx)[1], left = k < 1 ? p.total : instLeft(p, k);
+        const status = k < 1 ? `começa em ${monthLabel(p.first)}` : `parcela ${k} de ${p.n} neste mês`;
+        const pct = Math.min(100, Math.max(0, k) / p.n * 100);
+        return el("li", { class: "inst", style: `--k:${colorOf("expense", c)}` },
+          el("div", { class: "inst-main" },
+            el("b", {}, p.name), el("span", { class: "small" }, `${c.name} · ${p.n}x de ${fmt(instValue(p, 2))} · total ${fmt(p.total)}` + (p.day ? ` · vence dia ${p.day}` : "")),
+            el("div", { class: "inst-bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(p.n), "aria-valuenow": String(Math.max(0, k)), "aria-label": `${Math.max(0, k)} de ${p.n} parcelas` }, el("i", { style: `width:${pct}%` })),
+            el("span", { class: "small" }, `${status} · ${left > 0 ? `faltam ${fmt(left)}` : "última parcela"} · termina em ${monthLabel(planLast(p))}`)),
+          el("div", { class: "inst-actions" },
+            k >= 1 && k < p.n ? el("button", { class: "btn", type: "button", onclick: () => payOffPlan(p.id) }, "Antecipar o resto") : null,
+            el("button", { class: "btn ghost danger", type: "button", onclick: () => deletePlan(p.id) }, "Excluir compra")));
+      })));
+  }
+  // Antecipa as parcelas que faltam: um registro com o valor restante no mês aberto e nada depois dele
+  async function payOffPlan(id) {
+    const p = state.plans.find(x => x.id === id), mid = state.selected;
+    if (!p) return;
+    const k = planK(p, mid), left = instLeft(p, k);
+    const ok = await confirmDialog({ title: `Antecipar "${p.name}"?`, text: `As ${p.n - k} parcelas que faltam viram um único pagamento em ${monthLabel(mid)}, e somem dos meses seguintes.`,
+      details: [["Parcelas antecipadas", `${k + 1} a ${p.n}`], ["Valor", fmt(left)]], ok: "Antecipar" });
+    const t = state.plans.find(x => x.id === id);
+    if (!ok || !t || !state.months[mid]) return;
+    for (const m of monthIds()) {
+      if (m <= mid) continue;
+      const es = state.months[m].entries;
+      if (es.some(e => e.inst && e.inst.plan === id)) { state.months[m].entries = es.filter(e => !(e.inst && e.inst.plan === id)); store.saveMonth(m); }
+    }
+    state.months[mid].entries.push({ id: uid(), kind: "expense", ctx: t.ctx, name: `${t.name} (antecipação ${k + 1}–${t.n}/${t.n})`, value: left, at: Date.now(), inst: { plan: id, k: 0 } });
+    store.saveMonth(mid);
+    state.plans = state.plans.map(x => x.id === id ? { ...x, until: mid } : x);
+    store.savePlans();
+    render();
+    showToast(`"${t.name}" antecipada: ${fmt(left)} em ${monthLabel(mid)}`, 10000);
+  }
+  // Exclui a compra e todas as parcelas dela, em todos os meses
+  async function deletePlan(id) {
+    const p = state.plans.find(x => x.id === id);
+    if (!p) return;
+    const hits = monthIds().filter(m => state.months[m].entries.some(e => e.inst && e.inst.plan === id));
+    const ok = await confirmDialog({ title: `Excluir a compra "${p.name}"?`, text: "A compra sai da lista e as parcelas dela são apagadas de todos os meses.",
+      details: [["Parcelas lançadas", String(hits.length)], ["Total da compra", fmt(p.total)]], ok: "Excluir compra" });
+    if (!ok || !state.plans.some(x => x.id === id)) return;
+    for (const m of hits) { state.months[m].entries = state.months[m].entries.filter(e => !(e.inst && e.inst.plan === id)); store.saveMonth(m); }
+    state.plans = state.plans.filter(x => x.id !== id);
+    store.savePlans();
+    render();
+    showToast(`Compra "${p.name}" excluída`, 10000);
   }
 
   // ---------- Ações ----------
@@ -1799,7 +1967,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function genericLabel(keys) {
     if (keys.length > 1) return "Alteração em vários lugares";
     const k = keys[0];
-    return k === "settings" ? "Alteração nas tabelas" : k === "goals" ? "Alteração nas metas" : `Alteração em ${monthLabel(k.slice(2))}`;
+    return k === "settings" ? "Alteração nas tabelas" : k === "goals" ? "Alteração nas metas" : k === "plans" ? "Alteração nas compras parceladas" : `Alteração em ${monthLabel(k.slice(2))}`;
   }
   function updateHistBar() {
     const u = hist.undo[hist.undo.length - 1], r = hist.redo[hist.redo.length - 1];
@@ -1927,7 +2095,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const out = new Map();
     for (const m of before) {
       for (const e of state.months[m].entries) {
-        if (!findCtx(e.ctx)[1]) continue;
+        if (!findCtx(e.ctx)[1] || e.inst) continue;   // parcelas vêm das compras parceladas
         if (!out.has(e.ctx)) out.set(e.ctx, { month: m, items: [] });
         const src = out.get(e.ctx);
         if (src.month === m) src.items.push(e);
@@ -1974,9 +2142,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         else if (o.day) { o.day = Math.min(o.day, daysIn(id)); delete o.part; }
         return o;
       }));
-      state.months[id] = { entries: copied };
+      const insts = state.plans.filter(p => planActive(p, id) && findCtx(p.ctx)[1]).map((p, i) => instEntry(p, id, now + copied.length + i));
+      state.months[id] = { entries: [...copied, ...insts] };
       store.saveMonth(id);
-      hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : ""));
+      hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : "") + (insts.length ? ` e ${countLabel(insts.length, "parcela", "parcelas")}` : ""));
     }
     $("newMonthSheet").hidden = true;
     goto(id);

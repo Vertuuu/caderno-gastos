@@ -35,7 +35,7 @@ const isObj = (o) => o && typeof o === "object" && !Array.isArray(o);
 function normalize(raw, problems) {
   const d = isObj(raw) ? raw : {};
   if (!isObj(raw)) problems.push("conteúdo não era um objeto");
-  const out = { schema: SCHEMA, rev: Number.isFinite(d.rev) ? d.rev : 0, settings: { expense: [], income: [] }, months: {}, goals: [] };
+  const out = { schema: SCHEMA, rev: Number.isFinite(d.rev) ? d.rev : 0, settings: { expense: [], income: [] }, months: {}, goals: [], plans: [] };
   for (const k of ["expense", "income"]) {
     const list = isObj(d.settings) && Array.isArray(d.settings[k]) ? d.settings[k] : [];
     out.settings[k] = list.filter(c => isObj(c) && typeof c.id === "string" && typeof c.name === "string");
@@ -51,6 +51,7 @@ function normalize(raw, problems) {
     }
   } else if (d.months !== undefined) problems.push("meses em formato inválido");
   out.goals = Array.isArray(d.goals) ? d.goals.filter(g => isObj(g) && typeof g.id === "string") : [];
+  out.plans = Array.isArray(d.plans) ? d.plans.filter(x => isObj(x) && typeof x.id === "string") : [];
   // revisão da última mudança de cada documento (tabelas, metas e cada mês), para detectar conflitos
   out.docRev = {};
   if (isObj(d.docRev)) for (const [k, v] of Object.entries(d.docRev)) if (Number.isFinite(v)) out.docRev[k] = v;
@@ -236,7 +237,8 @@ function cleanMonth(b) {
   if (!isObj(b) || !Array.isArray(b.entries) || b.entries.length > 5000) return null;
   if (!b.entries.every(e => isObj(e) && isStr(e.id, 40) && (e.kind === "expense" || e.kind === "income") && isStr(e.ctx, 40) &&
     isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
-    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid))) return null;
+    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid) &&
+    (e.inst === undefined || (isObj(e.inst) && isStr(e.inst.plan, 40) && Number.isInteger(e.inst.k) && e.inst.k >= 0 && e.inst.k <= 120)))) return null;
   if (!uniqueIds(b.entries)) return null;
   // saldo no início do mês (opcional, pode ser negativo), usado na previsão do saldo
   if (b.opening !== undefined && !(typeof b.opening === "number" && Number.isFinite(b.opening) && Math.abs(b.opening) <= MAX_VALUE)) return null;
@@ -246,6 +248,7 @@ function cleanMonth(b) {
     if (e.day !== undefined) o.day = e.day;
     if (e.part !== undefined) o.part = e.part;
     if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
+    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };   // parcela k de uma compra parcelada (0 = antecipação)
     return o;
   }) };
   if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
@@ -265,6 +268,23 @@ function cleanGoals(b) {
     if (posNum(g.monthly)) o.monthly = g.monthly;
     if (Number.isInteger(g.months) && g.months > 0) o.months = g.months;
     if (g.active !== undefined) o.active = g.active;
+    return o;
+  });
+}
+
+// Compras parceladas: total dividido em n parcelas mensais a partir de "first"; "until" = mês em que o resto foi antecipado
+function cleanPlans(b) {
+  if (!isObj(b) || !Array.isArray(b.plans) || b.plans.length > 500) return null;
+  const ok = b.plans.every(x => isObj(x) && isStr(x.id, 40) && isStr(x.name, 100) && isStr(x.ctx, 40) && posNum(x.total) && x.total > 0 && x.total <= MAX_VALUE &&
+    Number.isInteger(x.n) && x.n >= 2 && x.n <= 120 && typeof x.first === "string" && MONTH_RE.test(x.first) &&
+    (x.until === undefined || (typeof x.until === "string" && MONTH_RE.test(x.until))) &&
+    (x.day === undefined || (Number.isInteger(x.day) && x.day >= 1 && x.day <= 31)) && (x.at === undefined || posNum(x.at)));
+  if (!ok || !uniqueIds(b.plans)) return null;
+  return b.plans.map(x => {
+    const o = { id: x.id, name: x.name, ctx: x.ctx, total: x.total, n: x.n, first: x.first };
+    if (x.until !== undefined) o.until = x.until;
+    if (x.day !== undefined) o.day = x.day;
+    if (x.at !== undefined) o.at = x.at;
     return o;
   });
 }
@@ -339,6 +359,14 @@ const server = http.createServer(async (req, res) => {
       if (conflict(res, "goals", raw.baseRev, () => ({ goals: data.goals })) || diskBlocked(res)) return;
       data.goals = goals;
       return send(res, 200, commit(["goals"]));
+    }
+    if (p === "/api/plans" && req.method === "PUT") {
+      const raw = await readBody(req);
+      const plans = cleanPlans(raw);
+      if (!plans) return send(res, 400, { error: "Compras parceladas inválidas" });
+      if (conflict(res, "plans", raw.baseRev, () => ({ plans: data.plans })) || diskBlocked(res)) return;
+      data.plans = plans;
+      return send(res, 200, commit(["plans"]));
     }
     const m = p.match(/^\/api\/months\/([^/]+)$/);
     if (m && !MONTH_RE.test(m[1])) return send(res, 404, { error: "Mês inválido" });
