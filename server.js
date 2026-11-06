@@ -35,21 +35,25 @@ const isObj = (o) => o && typeof o === "object" && !Array.isArray(o);
 function normalize(raw, problems) {
   const d = isObj(raw) ? raw : {};
   if (!isObj(raw)) problems.push("conteúdo não era um objeto");
-  const out = { schema: SCHEMA, rev: Number.isFinite(d.rev) ? d.rev : 0, settings: { expense: [], income: [] }, months: {}, goals: [] };
+  const out = { schema: SCHEMA, rev: Number.isFinite(d.rev) ? d.rev : 0, settings: { expense: [], income: [] }, months: {}, goals: [], plans: [] };
   for (const k of ["expense", "income"]) {
     const list = isObj(d.settings) && Array.isArray(d.settings[k]) ? d.settings[k] : [];
     out.settings[k] = list.filter(c => isObj(c) && typeof c.id === "string" && typeof c.name === "string");
     if (out.settings[k].length !== list.length) problems.push(`tabelas inválidas descartadas em ${k}`);
   }
+  // regras automáticas da importação de extrato
+  out.settings.rules = isObj(d.settings) && Array.isArray(d.settings.rules) ? d.settings.rules.filter(r => isObj(r) && typeof r.id === "string" && typeof r.match === "string") : [];
   if (isObj(d.months)) {
     for (const [id, m] of Object.entries(d.months)) {
       if (!MONTH_RE.test(id) || !isObj(m) || !Array.isArray(m.entries)) { problems.push(`mês ${id} inválido descartado`); continue; }
       const ok = m.entries.filter(e => isObj(e) && typeof e.id === "string" && typeof e.value === "number" && Number.isFinite(e.value));
       if (ok.length !== m.entries.length) problems.push(`registros inválidos descartados em ${id}`);
       out.months[id] = { entries: ok };
+      if (Number.isFinite(m.opening) && Math.abs(m.opening) <= MAX_VALUE) out.months[id].opening = m.opening;
     }
   } else if (d.months !== undefined) problems.push("meses em formato inválido");
   out.goals = Array.isArray(d.goals) ? d.goals.filter(g => isObj(g) && typeof g.id === "string") : [];
+  out.plans = Array.isArray(d.plans) ? d.plans.filter(x => isObj(x) && typeof x.id === "string") : [];
   // revisão da última mudança de cada documento (tabelas, metas e cada mês), para detectar conflitos
   out.docRev = {};
   if (isObj(d.docRev)) for (const [k, v] of Object.entries(d.docRev)) if (Number.isFinite(v)) out.docRev[k] = v;
@@ -197,6 +201,20 @@ const posNum = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0;
 const optBool = (b) => b === undefined || typeof b === "boolean";
 const uniqueIds = (list) => new Set(list.map(x => x.id)).size === list.length;
 
+// Datas de recebimento de uma tabela de entradas: divide o valor em parcelas, cada uma com a sua regra de dia
+// ("util" = N-ésimo dia útil do mês; "dia" = dia fixo, com ajuste quando cai em fim de semana ou feriado).
+function cleanPay(p) {
+  if (p === undefined) return undefined;
+  if (!isObj(p) || typeof p.on !== "boolean" || !optBool(p.sat) || !Array.isArray(p.parts) || p.parts.length < 1 || p.parts.length > 6) return null;
+  const ok = p.parts.every(x => isObj(x) && isStr(x.id, 40) && (x.type === "util" || x.type === "dia") && Number.isInteger(x.n) &&
+    x.n >= 1 && x.n <= (x.type === "util" ? 23 : 31) && posNum(x.pct) && x.pct <= 100 &&
+    (x.adjust === undefined || x.adjust === "antes" || x.adjust === "depois" || x.adjust === "manter"));
+  if (!ok || !uniqueIds(p.parts)) return null;
+  const sum = p.parts.reduce((s, x) => s + Math.round(x.pct * 100), 0);
+  if (sum !== 10000) return null;
+  return { on: p.on, sat: !!p.sat, parts: p.parts.map(x => ({ id: x.id, type: x.type, n: x.n, pct: x.pct, adjust: x.adjust || "antes" })) };
+}
+
 function cleanSettings(b) {
   if (!isObj(b)) return null;
   const out = {};
@@ -204,28 +222,46 @@ function cleanSettings(b) {
     const list = b[k];
     if (!Array.isArray(list) || list.length > 200) return null;
     if (!list.every(c => isObj(c) && isStr(c.id, 40) && isStr(c.name, 60) && optBool(c.repeat) &&
-      (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)))) return null;
+      (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)) && cleanPay(c.pay) !== null)) return null;
     out[k] = list.map(c => {
       const o = { id: c.id, name: c.name };
       if (c.color !== undefined) o.color = c.color;
       if (c.repeat !== undefined) o.repeat = c.repeat;
+      if (c.pay !== undefined) o.pay = cleanPay(c.pay);
       return o;
     });
   }
   if (!uniqueIds([...out.expense, ...out.income])) return null;
+  // regras da importação: "descrição contém <match>" -> tabela <ctx>, com nome opcional
+  if (b.rules !== undefined) {
+    if (!Array.isArray(b.rules) || b.rules.length > 300 || !uniqueIds(b.rules) ||
+      !b.rules.every(r => isObj(r) && isStr(r.id, 40) && isStr(r.match, 60) && isStr(r.ctx, 40) && (r.name === undefined || isStr(r.name, 120)))) return null;
+    out.rules = b.rules.map(r => r.name === undefined ? { id: r.id, match: r.match, ctx: r.ctx } : { id: r.id, match: r.match, ctx: r.ctx, name: r.name });
+  }
   return out;
 }
 
 function cleanMonth(b) {
   if (!isObj(b) || !Array.isArray(b.entries) || b.entries.length > 5000) return null;
   if (!b.entries.every(e => isObj(e) && isStr(e.id, 40) && (e.kind === "expense" || e.kind === "income") && isStr(e.ctx, 40) &&
-    isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)))) return null;
+    isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
+    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid) && (e.ext === undefined || isStr(e.ext, 80)) &&
+    (e.inst === undefined || (isObj(e.inst) && isStr(e.inst.plan, 40) && Number.isInteger(e.inst.k) && e.inst.k >= 0 && e.inst.k <= 120)))) return null;
   if (!uniqueIds(b.entries)) return null;
-  return { entries: b.entries.map(e => {
+  // saldo no início do mês (opcional, pode ser negativo), usado na previsão do saldo
+  if (b.opening !== undefined && !(typeof b.opening === "number" && Number.isFinite(b.opening) && Math.abs(b.opening) <= MAX_VALUE)) return null;
+  const out = { entries: b.entries.map(e => {
     const o = { id: e.id, kind: e.kind, ctx: e.ctx, name: e.name, value: e.value };
     if (e.at !== undefined) o.at = e.at;
+    if (e.day !== undefined) o.day = e.day;
+    if (e.part !== undefined) o.part = e.part;
+    if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
+    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };
+    if (e.ext !== undefined) o.ext = e.ext;   // identificador da transação importada do extrato (evita duplicar)   // parcela k de uma compra parcelada (0 = antecipação)
     return o;
   }) };
+  if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
+  return out;
 }
 
 function cleanGoals(b) {
@@ -241,6 +277,23 @@ function cleanGoals(b) {
     if (posNum(g.monthly)) o.monthly = g.monthly;
     if (Number.isInteger(g.months) && g.months > 0) o.months = g.months;
     if (g.active !== undefined) o.active = g.active;
+    return o;
+  });
+}
+
+// Compras parceladas: total dividido em n parcelas mensais a partir de "first"; "until" = mês em que o resto foi antecipado
+function cleanPlans(b) {
+  if (!isObj(b) || !Array.isArray(b.plans) || b.plans.length > 500) return null;
+  const ok = b.plans.every(x => isObj(x) && isStr(x.id, 40) && isStr(x.name, 100) && isStr(x.ctx, 40) && posNum(x.total) && x.total > 0 && x.total <= MAX_VALUE &&
+    Number.isInteger(x.n) && x.n >= 2 && x.n <= 120 && typeof x.first === "string" && MONTH_RE.test(x.first) &&
+    (x.until === undefined || (typeof x.until === "string" && MONTH_RE.test(x.until))) &&
+    (x.day === undefined || (Number.isInteger(x.day) && x.day >= 1 && x.day <= 31)) && (x.at === undefined || posNum(x.at)));
+  if (!ok || !uniqueIds(b.plans)) return null;
+  return b.plans.map(x => {
+    const o = { id: x.id, name: x.name, ctx: x.ctx, total: x.total, n: x.n, first: x.first };
+    if (x.until !== undefined) o.until = x.until;
+    if (x.day !== undefined) o.day = x.day;
+    if (x.at !== undefined) o.at = x.at;
     return o;
   });
 }
@@ -316,6 +369,14 @@ const server = http.createServer(async (req, res) => {
       data.goals = goals;
       return send(res, 200, commit(["goals"]));
     }
+    if (p === "/api/plans" && req.method === "PUT") {
+      const raw = await readBody(req);
+      const plans = cleanPlans(raw);
+      if (!plans) return send(res, 400, { error: "Compras parceladas inválidas" });
+      if (conflict(res, "plans", raw.baseRev, () => ({ plans: data.plans })) || diskBlocked(res)) return;
+      data.plans = plans;
+      return send(res, 200, commit(["plans"]));
+    }
     const m = p.match(/^\/api\/months\/([^/]+)$/);
     if (m && !MONTH_RE.test(m[1])) return send(res, 404, { error: "Mês inválido" });
     if (m && req.method === "PUT") {
@@ -347,7 +408,7 @@ const server = http.createServer(async (req, res) => {
       if (has || touched.length) {
         safetyBackup("tabela");
         if (has) { data.settings = { ...data.settings, [kind]: data.settings[kind].filter(c => c.id !== id) }; keys.push("settings"); }
-        for (const mid of touched) { data.months[mid] = { entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
+        for (const mid of touched) { data.months[mid] = { ...data.months[mid], entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
       }
       const out = keys.length ? commit(keys) : { rev: data.rev, prevRev: data.rev, docRev: {} };
       out.docs = {};

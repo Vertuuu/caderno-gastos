@@ -33,6 +33,7 @@
   --earn-soft: #d9f0e5;
   --spend: #d03b2a;
   --spend-soft: #fbe2dd;
+  --warn: #a35f00; --warn-soft: #fbedd3;
   --k0: #17855a; --k1: #d03b2a; --k2: #2f5bd3; --k3: #b86a00; --k4: #8a3fc7; --k5: #0b8287; --k6: #a34d22; --k7: #577a12; --k8: #c4256f; --k9: #4a5670;
   /* cartões: cabeçalho sólido na cor do contexto */
   --head-mix: 100%;
@@ -50,7 +51,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
     --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
-    --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18;
+    --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
     --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
     --head-mix: 16%; --head-ink: #e6e9f3; --total-k: 100%; --card-k: 0%; --row-k: 0%;
     --shadow: 0 1px 0 rgb(0 0 0 / .3), 0 8px 22px -10px rgb(0 0 0 / .6);
@@ -60,7 +61,7 @@
 :root[data-theme="dark"] {
   --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
   --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
-  --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18;
+  --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
   --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
   --head-mix: 16%; --head-ink: #e6e9f3; --total-k: 100%; --card-k: 0%; --row-k: 0%;
   --shadow: 0 1px 0 rgb(0 0 0 / .3), 0 8px 22px -10px rgb(0 0 0 / .6);
@@ -212,6 +213,182 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .row .del:hover { background: var(--spend-soft); color: var(--spend); }
 .row input { border: 1px solid var(--focus); border-radius: 7px; padding: 6px 9px; background: var(--surface); width: 100%; min-width: 0; }
 .row input.val { text-align: right; font-family: var(--f-num); width: 112px; }
+.row.with-day { grid-template-columns: minmax(0, 1fr) 62px auto 30px; }
+.row input.day { width: 62px; text-align: center; font-family: var(--f-num); }
+.daychip { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-family: var(--f-num); font-variant-numeric: tabular-nums; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; white-space: nowrap; }
+.daychip.paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
+.card-title .paybadge { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
+.paybox { display: grid; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.paybox .toggle { justify-self: start; background: var(--surface); }
+.payline { display: grid; grid-template-columns: minmax(0, 1fr) 52px 66px 30px; align-items: center; gap: 6px; padding: 8px; border: 1px solid var(--hair); border-radius: 10px; background: var(--surface); }
+.paysub { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.paysub select { flex: none; }
+.payline select, .menu .payline input { width: auto; border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.payline select { min-width: 0; width: 100%; }
+.paysub select { width: auto; }
+.menu .payline input.payn { width: 100%; text-align: center; padding: 5px 4px; }
+.menu .payline input.paypct { width: 100%; text-align: right; padding: 5px 4px; }
+.pctwrap { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: var(--muted); }
+.paywhen { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.payline .iconbtn { width: 30px; height: 30px; }
+.payfoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.paybox > .btn { justify-self: start; }
+.row.has-check { grid-template-columns: 26px minmax(0, 1fr) auto 30px; padding-left: 8px; }
+.paycheck { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--faint); background: transparent; color: transparent; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }
+.paycheck:hover { border-color: var(--earn); color: color-mix(in srgb, var(--earn) 60%, transparent); }
+.paycheck[aria-pressed="true"] { background: var(--earn); border-color: var(--earn); color: #fff; }
+.row.is-paid .cell.name { color: var(--muted); }
+.daychip.due-paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
+.daychip.due-late { color: var(--spend); border-color: color-mix(in srgb, var(--spend) 50%, transparent); background: var(--spend-soft); font-weight: 600; }
+.daychip.due-today, .daychip.due-soon { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); background: var(--warn-soft); font-weight: 600; }
+.alerts { border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn-soft) 55%, var(--surface)); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; }
+.alerts[data-level="late"] { border-color: color-mix(in srgb, var(--spend) 45%, var(--line)); background: color-mix(in srgb, var(--spend-soft) 55%, var(--surface)); }
+.alerts-title { margin: 0; font-weight: 600; font-size: 14px; }
+.alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.alerts li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.alerts li:first-child { border-top: 0; }
+.alerts .a-name { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.alerts .a-name small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.alerts .a-val { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.alerts .daychip { margin: 0; }
+.alerts .btn { padding: 4px 10px; font-size: 13px; }
+@media (max-width: 640px) {
+  .alerts li { grid-template-columns: minmax(0, 1fr) auto; }
+  .alerts .a-name { grid-area: 1 / 1; }
+  .alerts .a-val { grid-area: 1 / 2; justify-self: end; }
+  .alerts .daychip { grid-area: 2 / 1; justify-self: start; }
+  .alerts .btn { grid-area: 2 / 2; justify-self: end; }
+}
+.forecast { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.fc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fc-head h2 { margin: 0; font-size: 18px; }
+.fc-figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fc-fig { display: grid; gap: 2px; min-width: 0; }
+.fc-fig .lab { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fc-fig .big { font-family: var(--f-num); font-size: 22px; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-fig .big.neg, .fc-tip .neg { color: var(--spend); }
+.fc-fig .sub { font-size: 12.5px; color: var(--muted); }
+.fc-warn { margin: 0; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--spend-soft); color: var(--ink); font-size: 14px; }
+.fc-warn b { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--spend); color: #fff; display: grid; place-items: center; font-size: 13px; }
+.fc-chart { position: relative; min-width: 0; }
+.fc-chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.fc-chart svg rect[tabindex]:focus { outline: none; }
+.fc-chart svg:has(rect[tabindex]:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 6px; }
+.fc-grid { stroke: var(--hair); stroke-width: 1; }
+.fc-zero { stroke: var(--faint); stroke-width: 1; }
+.fc-axis { fill: var(--muted); font-size: 11px; font-family: var(--f-num); }
+.fc-line { fill: none; stroke: var(--focus); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.fc-line.neg { stroke: var(--spend); }
+.fc-area { fill: var(--focus); opacity: .1; }
+.fc-area.neg { fill: var(--spend); opacity: .14; }
+.fc-today { stroke: var(--muted); stroke-width: 1; }
+.fc-today-lab { font-family: inherit; font-weight: 600; }
+.fc-dot { fill: var(--focus); stroke: var(--surface); stroke-width: 2; }
+.fc-dot.neg { fill: var(--spend); }
+.fc-label { fill: var(--ink); font-size: 12px; font-weight: 600; font-family: var(--f-num); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.fc-cross { stroke: var(--muted); stroke-width: 1; }
+.fc-tip { position: absolute; z-index: 2; pointer-events: none; display: grid; gap: 2px; min-width: 160px; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12.5px; }
+.fc-ev { font-family: var(--f-num); font-size: 12.5px; }
+.fc-ev.in { color: var(--earn); }
+.fc-ev.out { color: var(--ink); }
+.fc-open { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.fc-open input { width: 130px; border: 1px solid var(--focus); border-radius: 8px; padding: 6px 9px; background: var(--surface); text-align: right; font-family: var(--f-num); }
+.fc-open .btn { padding: 4px 10px; font-size: 13px; }
+.fc-table summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); }
+.fc-table table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+.fc-table th, .fc-table td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--hair); vertical-align: top; }
+.fc-table thead th { border-top: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+.fc-table tbody th { font-weight: 500; white-space: nowrap; }
+.fc-evs { display: flex; flex-direction: column; gap: 2px; }
+.fc-table .num { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fc-table tr.is-today { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+.fc-table tr.is-neg td.num { color: var(--spend); }
+@media (max-width: 640px) {
+  .forecast { padding: 16px 14px; }
+  .fc-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fc-fig.end { grid-column: 1 / -1; }
+  .fc-fig .big { font-size: 19px; }
+}
+.instrow { grid-column: 1 / -1; display: grid; gap: 6px; }
+.adder .insttoggle { justify-self: start; background: transparent; color: var(--muted); border: 0; font-size: 12.5px; font-weight: 600; padding: 2px 4px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.adder .insttoggle:hover { color: var(--ink); }
+.instopts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--muted); }
+.instopts label { display: inline-flex; align-items: center; gap: 4px; }
+.adder .instopts input { width: 58px; text-align: center; padding: 5px 6px; border-style: solid; background: var(--surface); }
+.instopts select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.instprev { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); font-family: var(--f-num); }
+.instlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.inst { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--k); border-radius: 12px; background: var(--surface); }
+.inst-main { display: grid; gap: 5px; min-width: 0; }
+.inst-main b { overflow-wrap: anywhere; }
+.inst-bar { height: 6px; border-radius: 999px; background: var(--sunk); overflow: hidden; }
+.inst-bar i { display: block; height: 100%; border-radius: 999px; background: var(--k); }
+.inst-actions { display: grid; gap: 6px; justify-items: end; }
+.inst-actions .btn { padding: 4px 10px; font-size: 13px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .inst { grid-template-columns: minmax(0, 1fr); }
+  .inst-actions { grid-auto-flow: column; justify-content: start; }
+}
+.since { border: 1px solid color-mix(in srgb, var(--focus) 40%, var(--line)); background: color-mix(in srgb, var(--focus) 6%, var(--surface)); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
+.since-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.since-head h2 { margin: 0; font-size: 16px; }
+.since-head .btn { padding: 4px 12px; font-size: 13px; }
+.since-block { display: grid; gap: 8px; justify-items: start; }
+.since-block p { margin: 0; font-size: 14px; }
+.since-block ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: 100%; }
+.since-block li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 14px; }
+.since-block li .daychip { margin: 0; }
+.since-block li b { font-family: var(--f-num); font-weight: 500; }
+.since-block .btn { padding: 5px 12px; font-size: 13px; }
+.importdlg { width: min(980px, calc(100vw - 24px)); max-height: calc(100vh - 32px); border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.importdlg[open] { display: grid; gap: 14px; padding: 18px 20px; overflow: auto; }
+.importdlg::backdrop { background: rgb(8 12 24 / .45); }
+.imp-head { display: flex; align-items: center; justify-content: space-between; }
+.imp-head h2 { margin: 0; font-size: 20px; }
+.imp-src { display: grid; gap: 8px; }
+.imp-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.imp-src textarea { width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--sunk); color: inherit; font-family: var(--f-num); font-size: 12.5px; }
+.imp-src details .btn { margin-top: 6px; }
+.imp-src summary, .imp-rules summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.imp-err { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--spend-soft); color: var(--ink); font-size: 14px; }
+.imp-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.imp-scroll { overflow: auto; max-height: 48vh; border: 1px solid var(--hair); border-radius: 10px; }
+.imp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.imp-table th, .imp-table td { padding: 6px 8px; border-top: 1px solid var(--hair); text-align: left; vertical-align: middle; }
+.imp-table thead th { position: sticky; top: 0; background: var(--surface); border-top: 0; font-size: 12px; color: var(--muted); z-index: 1; }
+.imp-table td input[type="text"] { width: 100%; min-width: 140px; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; background: transparent; color: inherit; }
+.imp-table td input[type="text"]:hover, .imp-table td input[type="text"]:focus { border-color: var(--line); background: var(--sunk); }
+.imp-table td small { display: block; font-size: 11.5px; color: var(--muted); padding-left: 7px; overflow-wrap: anywhere; }
+.imp-table td small em { font-style: normal; font-weight: 600; margin-left: 6px; color: var(--focus); }
+.imp-table select { max-width: 170px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.imp-table .num { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.imp-table td.income { color: var(--earn); }
+.imp-table tr.off td:not(:first-child) { opacity: .5; }
+.imp-table tr.missing td small em { color: var(--spend); }
+.imp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.imp-actions { display: flex; gap: 8px; }
+.imp-rules ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.imp-rules li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 4px 0; border-top: 1px solid var(--hair); }
+.imp-addrule { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.imp-addrule input, .imp-addrule select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; min-width: 0; flex: 1 1 140px; }
+@media (max-width: 640px) {
+  .importdlg[open] { padding: 14px; }
+  /* no celular cada transação vira um bloco: marca | nome / data e valor / tabela */
+  .imp-table thead { display: none; }
+  .imp-table, .imp-table tbody { display: block; }
+  .imp-table tr { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; grid-template-areas: "c n n" "c d v" "c s s"; gap: 2px 6px; padding: 8px 6px; border-top: 1px solid var(--hair); }
+  .imp-table tr:first-child { border-top: 0; }
+  .imp-table td { border: 0; padding: 2px; }
+  .imp-table td:nth-child(1) { grid-area: c; padding-top: 6px; }
+  .imp-table td:nth-child(2) { grid-area: d; text-align: left; color: var(--muted); padding-left: 9px; }
+  .imp-table td:nth-child(3) { grid-area: n; }
+  .imp-table td:nth-child(4) { grid-area: s; }
+  .imp-table td:nth-child(5) { grid-area: v; }
+  .imp-table td input[type="text"] { min-width: 0; }
+  .imp-table select { max-width: none; width: 100%; }
+  .imp-scroll { max-height: none; overflow: visible; }
+  .monthtools { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -414,9 +591,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     </div>
 
     <div class="monthtools" id="monthTools" hidden>
+      <button class="btn ghost" id="importBtn" title="Importar um extrato do banco ou a fatura do cartão (OFX ou CSV)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg>Importar extrato</button>
       <button class="btn ghost" id="clearMonth" title="Apaga todos os itens deste mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Limpar registros</button>
       <button class="btn ghost danger" id="deleteMonth" title="Remove o mês e seus registros"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 14l4 4M14 14l-4 4"/></svg>Excluir mês</button>
     </div>
+
+    <section class="since" id="since" hidden aria-labelledby="sinceTitle"></section>
+
+    <section class="alerts" id="alerts" hidden aria-label="Contas a vencer" aria-live="polite"></section>
 
     <section class="summary" id="summary" aria-label="Resumo do mês">
       <div class="figures">
@@ -428,6 +610,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <div class="legend" id="legend"></div>
     </section>
 
+    <section class="forecast" id="forecast" hidden aria-labelledby="fcTitle"></section>
+
     <section class="section sec-in" id="secIn" aria-labelledby="hIn">
       <div class="sec-head"><h2 id="hIn">Entradas <span class="tag" id="cIn"></span></h2><span class="sum num" id="sIn"></span></div>
       <div class="board" id="boardIn"></div>
@@ -437,6 +621,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <div class="sec-head"><h2 id="hOut">Saídas <span class="tag" id="cOut"></span></h2><span class="sum num" id="sOut"></span></div>
       <div class="board" id="boardOut"></div>
     </section>
+
+    <section class="section sec-inst" id="secInst" hidden aria-labelledby="hInst"></section>
 
     <section id="charts" hidden aria-label="Gráficos"></section>
     <section id="goals" hidden aria-label="Metas"></section>
@@ -457,6 +643,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     </div>
   </form>
 </dialog>
+
+<dialog class="importdlg" id="importDlg" aria-labelledby="impTitle"></dialog>
 
 <div class="toast" id="toast" hidden role="status"><span id="toastText"></span><button id="toastUndo">Desfazer</button></div>
 
@@ -505,7 +693,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   };
 
   const state = {
-    settings: { expense: [], income: [] },
+    settings: { expense: [], income: [], rules: [] },
     months: {},
     selected: null,
     menu: null,          // id do contexto com menu aberto
@@ -514,6 +702,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     focusAdder: null,    // ctxId para focar após render
     copySel: new Set(),
     goals: [],
+    plans: [],           // compras parceladas
+    instDraft: null,     // { ctx, n, start, day } enquanto o "Parcelar" está aberto num cartão
   };
 
   // ---------- Servidor ----------
@@ -546,26 +736,33 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return out;
   }
   function mergeDoc(key, base, local, remote) {
-    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []) };
+    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []),
+      rules: mergeById(base && base.rules, local.rules, remote ? remote.rules : []) };
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
+    if (key === "plans") return { plans: mergeById(base && base.plans, local.plans, remote ? remote.plans : []) };
     if (local === null) return null;                  // mês excluído aqui
     const entries = mergeById(base && base.entries, local.entries, remote ? remote.entries : []);
-    return remote === null && entries.length === 0 ? null : { entries };
+    // saldo inicial: vale o daqui se foi mudado aqui; se não, o de lá
+    const opening = (base ? base.opening : undefined) !== local.opening ? local.opening : (remote ? remote.opening : undefined);
+    if (remote === null && entries.length === 0) return null;
+    return opening === undefined ? { entries } : { entries, opening };
   }
   function docGet(key) {
-    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income };
+    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [] };
     if (key === "goals") return { goals: state.goals };
+    if (key === "plans") return { plans: state.plans };
     const m = state.months[key.slice(2)];
-    return m ? { entries: m.entries } : null;
+    return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
   }
   function docSet(key, doc) {
-    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income };
+    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income, rules: doc.rules || [] };
     else if (key === "goals") state.goals = doc.goals;
-    else if (doc) state.months[key.slice(2)] = { entries: doc.entries };
+    else if (key === "plans") state.plans = doc.plans;
+    else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
     else delete state.months[key.slice(2)];
   }
-  const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : (d.months[key.slice(2)] || null);
-  const docUrl = (key) => key === "settings" ? "api/settings" : key === "goals" ? "api/goals" : `api/months/${key.slice(2)}`;
+  const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : key === "plans" ? { plans: d.plans || [] } : (d.months[key.slice(2)] || null);
+  const docUrl = (key) => key === "settings" ? "api/settings" : key === "goals" ? "api/goals" : key === "plans" ? "api/plans" : `api/months/${key.slice(2)}`;
 
   const store = {
     ready: false, rev: -1,
@@ -612,9 +809,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       this.heldSince = 0;
       this.rev = d.rev;
       d.months = d.months || {};
-      const keys = new Set(["settings", "goals", ...Object.keys(d.months).map(m => "m:" + m), ...Object.keys(state.months).map(m => "m:" + m)]);
+      const keys = new Set(["settings", "goals", "plans", ...Object.keys(d.months).map(m => "m:" + m), ...Object.keys(state.months).map(m => "m:" + m)]);
       for (const key of keys) {
-        const remote = docFromData(d, key) || (key === "settings" ? { expense: [], income: [] } : key === "goals" ? { goals: [] } : null);
+        const remote = docFromData(d, key) || (key === "settings" ? { expense: [], income: [] } : key === "goals" ? { goals: [] } : key === "plans" ? { plans: [] } : null);
         if (this.dirty.has(key)) docSet(key, mergeDoc(key, this.base[key], docGet(key), remote));
         else docSet(key, clone(remote));
         this.base[key] = clone(remote);
@@ -707,6 +904,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     saveSettings() { this.mark("settings"); },
     saveMonth(id) { this.mark("m:" + id); },
     saveGoals() { this.mark("goals"); },
+    savePlans() { this.mark("plans"); },
     deleteMonth(id) { this.mark("m:" + id); },   // o mês já saiu de state.months: o envio vira exclusão
   };
   function setStatus(s, text) { $("status").dataset.state = s; $("statusText").textContent = text; }
@@ -834,6 +1032,131 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   const countLabel = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+  // ---------- Datas de recebimento ----------
+  // Uma tabela de entradas pode ter "pay": { on, sat, parts: [{ id, type: "util"|"dia", n, pct, adjust }] }.
+  // Ligado, cada valor lançado nela é dividido nas parcelas (ex.: 60% no 5º dia útil e 40% no dia 20),
+  // e cada parcela vira um registro com o dia em que cai naquele mês ("day") e a regra de origem ("part").
+  const PAY_MAX = 6;
+  const newPay = () => ({ on: true, sat: false, parts: [
+    { id: uid(), type: "util", n: 5, pct: 60, adjust: "antes" },
+    { id: uid(), type: "dia", n: 20, pct: 40, adjust: "antes" },
+  ] });
+  const payOn = (c) => !!(c && c.pay && c.pay.on && c.pay.parts && c.pay.parts.length);
+  const partLabel = (p) => p.type === "util" ? `${p.n}º dia útil` : `dia ${p.n}`;
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const daysIn = (monthId) => { const [y, m] = monthId.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+  // Feriados nacionais (fixos + Sexta-feira Santa, que depende da Páscoa)
+  const holidayCache = {};
+  function holidays(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const easter = new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+    const friday = new Date(easter); friday.setDate(easter.getDate() - 2);
+    const set = new Set(["01-01", "04-21", "05-01", "09-07", "10-12", "11-02", "11-15", "12-25", `${pad2(friday.getMonth() + 1)}-${pad2(friday.getDate())}`]);
+    if (y >= 2024) set.add("11-20");   // Consciência Negra virou feriado nacional em 2024
+    return (holidayCache[y] = set);
+  }
+  function isWorkday(monthId, day, sat) {
+    const [y, m] = monthId.split("-").map(Number);
+    const wd = new Date(y, m - 1, day).getDay();
+    if (wd === 0 || (wd === 6 && !sat)) return false;
+    return !holidays(y).has(`${pad2(m)}-${pad2(day)}`);
+  }
+  // Dia do mês em que a parcela cai
+  function payDay(monthId, p, sat) {
+    const last = daysIn(monthId);
+    if (p.type === "util") {
+      let n = 0;
+      for (let d = 1; d <= last; d++) if (isWorkday(monthId, d, sat) && ++n === p.n) return d;
+      return last;
+    }
+    const d = Math.min(p.n, last);
+    if (p.adjust === "manter" || isWorkday(monthId, d, sat)) return d;
+    const first = p.adjust === "depois" ? 1 : -1;
+    for (const step of [first, -first]) for (let x = d + step; x >= 1 && x <= last; x += step) if (isWorkday(monthId, x, sat)) return x;
+    return d;
+  }
+  // Divide em centavos: cada parcela leva a sua porcentagem e a última fica com o arredondamento
+  function splitValue(value, parts) {
+    const cents = Math.round(value * 100);
+    let used = 0;
+    return parts.map((p, i) => {
+      const c = i === parts.length - 1 ? cents - used : Math.round(cents * p.pct / 100);
+      used += c;
+      return c / 100;
+    });
+  }
+  // Registros de uma entrada já divididos pelas datas da tabela (ou um só, se a tabela não divide)
+  function splitEntry(monthId, c, base) {
+    if (!payOn(c)) return [base];
+    const vals = splitValue(base.value, c.pay.parts);
+    return c.pay.parts.map((p, i) => ({ ...base, id: i ? uid() : base.id, value: vals[i], day: payDay(monthId, p, c.pay.sat), part: p.id, at: (base.at || Date.now()) + i }))
+      .filter(e => e.value > 0);
+  }
+  const partOf = (c, e) => c && c.pay && e.part ? c.pay.parts.find(p => p.id === e.part) : null;
+  const dayLabel = (monthId, day) => `${pad2(day)}/${monthId.slice(5)}`;
+
+  // ---------- Compras parceladas ----------
+  // Uma compra (state.plans) vira um registro por mês: "Nome (k/n)", com { inst: { plan, k } }. As parcelas são
+  // escritas nos meses que já existem e, nos que ainda não existem, quando o mês for criado. A diferença dos
+  // centavos fica na 1ª parcela, como na fatura do cartão.
+  const monthsBetween = (a, b) => { const [ya, ma] = a.split("-").map(Number), [yb, mb] = b.split("-").map(Number); return (yb - ya) * 12 + mb - ma; };
+  const planK = (p, monthId) => monthsBetween(p.first, monthId) + 1;          // nº da parcela naquele mês
+  const planLast = (p) => shiftMonth(p.first, p.n - 1);
+  const planActive = (p, monthId) => { const k = planK(p, monthId); return k >= 1 && k <= p.n && (!p.until || monthId <= p.until); };
+  function instValue(p, k) {
+    const cents = Math.round(p.total * 100), each = Math.floor(cents / p.n);
+    return (k === 1 ? cents - each * (p.n - 1) : each) / 100;
+  }
+  const instLeft = (p, k) => sumMoney(Array.from({ length: Math.max(0, p.n - k) }, (_, i) => instValue(p, k + 1 + i)));   // depois da parcela k
+  function instEntry(p, monthId, at) {
+    const k = planK(p, monthId), e = { id: uid(), kind: "expense", ctx: p.ctx, name: `${p.name} (${k}/${p.n})`, value: instValue(p, k), at: at || Date.now(), inst: { plan: p.id, k } };
+    if (p.day) e.day = Math.min(p.day, daysIn(monthId));
+    return e;
+  }
+  // Escreve as parcelas que faltam nos meses que já existem; devolve os meses alterados
+  function materializePlan(p) {
+    const touched = [];
+    for (const m of monthIds()) {
+      if (!planActive(p, m)) continue;
+      const es = state.months[m].entries, k = planK(p, m);
+      if (es.some(e => e.inst && e.inst.plan === p.id && e.inst.k === k)) continue;
+      es.push(instEntry(p, m));
+      touched.push(m);
+    }
+    touched.forEach(m => store.saveMonth(m));
+    return touched;
+  }
+
+  // ---------- Vencimento das contas ----------
+  // Numa saída, "day" é o dia do vencimento e "paid" marca a conta como paga. Se o vencimento cai em
+  // fim de semana ou feriado, a conta pode ser paga no próximo dia útil sem atraso (como boleto).
+  const SOON_DAYS = 3;
+  const dueDay = (monthId, day) => payDay(monthId, { type: "dia", n: day, adjust: "depois" }, false);
+  // paid | late | today | soon | later (mês atual) · past | future (outros meses)
+  function dueState(monthId, e) {
+    if (e.paid) return "paid";
+    const cur = currentMonthId();
+    if (monthId !== cur) return monthId < cur ? "past" : "future";
+    const t = new Date().getDate(), d = dueDay(monthId, e.day);
+    return d < t ? "late" : d === t ? "today" : d - t <= SOON_DAYS ? "soon" : "later";
+  }
+  function dueText(monthId, e, st) {
+    const d = dueDay(monthId, e.day), left = d - new Date().getDate();
+    if (st === "paid") return "paga";
+    if (st === "late") return `venceu ${dayLabel(monthId, d)}`;
+    if (st === "today") return "vence hoje";
+    if (st === "soon") return left === 1 ? "vence amanhã" : `vence em ${left} dias`;
+    return `vence ${dayLabel(monthId, d)}`;
+  }
+  function dueTitle(monthId, e) {
+    const d = dueDay(monthId, e.day);
+    const moved = d !== e.day ? ` O dia ${e.day} cai em fim de semana ou feriado: dá para pagar até ${dayLabel(monthId, d)}.` : "";
+    return `Vence todo dia ${e.day}.${moved}${e.paid ? " Já paga." : ""}`;
+  }
+
   function afterLoad() {
     if (!state.selected || !state.months[state.selected]) {
       const ids = monthIds(), cur = currentMonthId();
@@ -858,18 +1181,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("goals").hidden = view !== "goals";
     if (view !== "lanc") {
       $("newMonthSheet").hidden = true;
-      ["welcome", "summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = true);
+      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast", "secInst", "since"].forEach(id => $(id).hidden = true);
       document.title = `${view === "charts" ? "Gráficos" : "Metas"} · Caderno de Gastos`;
       if (store.ready && view === "charts" && window.renderCharts) window.renderCharts(chartsApi);
       if (store.ready && view === "goals" && window.renderGoals) window.renderGoals(chartsApi);
       return;
     }
     const has = !!state.selected;
+    renderSince();
     $("welcome").hidden = has || !store.ready;
     ["summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = !has);
     if (has) $("clearMonth").disabled = entries().length === 0;
     renderNav();
-    if (has) { renderSummary(); renderBoard("income"); renderBoard("expense"); }
+    if (has) { renderAlerts(); renderSummary(); renderForecast(); renderBoard("income"); renderBoard("expense"); renderPlans(); } else $("alerts").hidden = $("forecast").hidden = $("secInst").hidden = true;
     if (state.focusAdder) {
       const inp = document.querySelector(`.adder[data-ctx="${state.focusAdder}"] input`);
       if (inp) inp.focus();
@@ -898,6 +1222,343 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // Registros cuja tabela não existe mais (sobras de exclusões antigas ou de conflitos entre aparelhos)
   const orphans = (kind) => entries().filter(e => e.kind === kind && !ctxs(kind).some(c => c.id === e.ctx));
 
+  // Entrada com data já caiu? (mês passado: sim; mês futuro: não; mês atual: compara com hoje)
+  function isPaid(e) {
+    if (!e.day || !state.selected) return false;
+    const cur = currentMonthId();
+    return state.selected < cur || (state.selected === cur && e.day <= new Date().getDate());
+  }
+  // "R$ 3.000,00 já caiu · dia 20: R$ 2.000,00" no resumo, quando as entradas têm data
+  function incomeTimeline(es) {
+    const dated = es.filter(e => e.kind === "income" && e.day);
+    if (!dated.length || state.selected < currentMonthId()) return "";
+    const paid = sumMoney(dated.filter(isPaid).map(e => e.value));
+    const next = dated.filter(e => !isPaid(e)).map(e => e.day).sort((a, b) => a - b)[0];
+    if (!next) return "Tudo recebido";
+    const nextSum = sumMoney(dated.filter(e => e.day === next).map(e => e.value));
+    return (paid > 0 ? `${fmt(paid)} já caiu · ` : "") + `dia ${next}: ${fmt(nextSum)}`;
+  }
+
+  // "R$ 1.680,00 a pagar · 1 vencida" no resumo (mês atual e futuros)
+  function billsSummary(es) {
+    const mid = state.selected;
+    if (!mid || mid < currentMonthId()) return "";
+    const bills = es.filter(e => e.kind === "expense" && e.day);
+    if (!bills.length) return "";
+    const open = bills.filter(e => !e.paid);
+    if (!open.length) return "contas pagas";
+    const late = open.filter(e => dueState(mid, e) === "late").length;
+    return `${fmt(sumMoney(open.map(e => e.value)))} a pagar` + (late ? ` · ${countLabel(late, "vencida", "vencidas")}` : "");
+  }
+
+  // ---------- Desde a última vez ----------
+  // Cada aparelho lembra o dia da última visita (localStorage). Ao abrir de novo, um quadro resume o que
+  // aconteceu desde então no mês atual: entradas que caíram e contas que venceram (com "marcar como pagas").
+  // Se o mês atual ainda não existe, oferece criá-lo com as tabelas que repetem e as parcelas.
+  const VISIT_KEY = "caderno-ultima-visita";
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+  const readVisit = () => { try { return localStorage.getItem(VISIT_KEY); } catch (e) { return null; } };
+  const writeVisit = (v) => { try { localStorage.setItem(VISIT_KEY, v); } catch (e) {} };
+  const sinceState = { last: undefined, hidden: false };
+  function sinceInfo() {
+    const cur = currentMonthId(), today = new Date().getDate();
+    const missing = !state.months[cur] && monthIds().length > 0 && monthIds()[monthIds().length - 1] < cur;
+    const last = sinceState.last;
+    let fell = [], due = [];
+    if (last && /^\d{4}-\d{2}-\d{2}$/.test(last) && last < todayStr() && state.months[cur]) {
+      const from = last.slice(0, 7) === cur ? Number(last.slice(8)) + 1 : 1;
+      const es = state.months[cur].entries;
+      fell = es.filter(e => e.kind === "income" && e.day && e.day >= from && e.day <= today);
+      due = es.filter(e => e.kind === "expense" && e.day && !e.paid && (d => d >= from && d <= today)(dueDay(cur, e.day)));
+    }
+    return { cur, missing, last, fell, due };
+  }
+  function renderSince() {
+    const box = $("since");
+    if (!store.ready) { box.hidden = true; return; }
+    if (sinceState.last === undefined) {
+      sinceState.last = readVisit();
+      if (!sinceState.last) writeVisit(todayStr());     // primeira visita neste aparelho: nada a resumir
+    }
+    const s = sinceInfo();
+    const show = !sinceState.hidden && (s.missing || ((s.fell.length || s.due.length) && state.selected === s.cur));
+    box.hidden = !show;
+    if (!show) return box.replaceChildren();
+    const lastLabel = s.last ? `${s.last.slice(8)}/${s.last.slice(5, 7)}` : "";
+    const parts = [];
+    if (s.missing) {
+      const sel = defaultCopySel();
+      const names = [...ctxs("income"), ...ctxs("expense")].filter(c => sel.has(c.id)).map(c => c.name);
+      const nInst = state.plans.filter(p => planActive(p, s.cur) && findCtx(p.ctx)[1]).length;
+      parts.push(el("div", { class: "since-block" },
+        el("p", {}, el("b", {}, `${monthLabel(s.cur)} ainda não foi criado.`), " ",
+          names.length || nInst ? `Dá para criar agora já com ${[names.length ? names.join(", ") : "", nInst ? countLabel(nInst, "parcela", "parcelas") : ""].filter(Boolean).join(" e ")}.` : ""),
+        el("button", { class: "btn solid", type: "button", onclick: () => { const n = buildMonth(s.cur, sel); goto(s.cur); showToast(`${monthLabel(s.cur)} criado` + (n ? ` com ${countLabel(n, "item", "itens")}` : ""), 8000); } }, `Criar ${MONTHS[Number(s.cur.slice(5)) - 1]}`)));
+    }
+    if (s.fell.length) parts.push(el("div", { class: "since-block" },
+      el("p", {}, el("b", {}, s.fell.length === 1 ? "Entrada que caiu" : "Entradas que caíram"), ` · ${fmt(sumMoney(s.fell.map(e => e.value)))}`),
+      el("ul", {}, ...s.fell.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip paid" }, dayLabel(s.cur, e.day)), e.name, el("b", { class: "num" }, fmt(e.value)))))));
+    if (s.due.length) parts.push(el("div", { class: "since-block" },
+      el("p", {}, el("b", {}, s.due.length === 1 ? "Conta que venceu" : "Contas que venceram"), ` · ${fmt(sumMoney(s.due.map(e => e.value)))}`),
+      el("ul", {}, ...s.due.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip due-late" }, dayLabel(s.cur, dueDay(s.cur, e.day))), e.name, el("b", { class: "num" }, fmt(e.value))))),
+      el("button", { class: "btn", type: "button", onclick: () => {
+        const ids = new Set(s.due.map(e => e.id));
+        state.months[s.cur].entries.forEach(e => { if (ids.has(e.id)) e.paid = true; });
+        store.saveMonth(s.cur);
+        hist.label(`${countLabel(ids.size, "conta marcada", "contas marcadas")} como paga${ids.size === 1 ? "" : "s"}`);
+        render();
+      } }, s.due.length === 1 ? "✓ Já paguei" : `✓ Já paguei as ${s.due.length}`)));
+    box.replaceChildren(
+      el("div", { class: "since-head" },
+        el("h2", { id: "sinceTitle" }, s.last && s.last < todayStr() ? `Desde a sua última visita (${lastLabel})` : "Para começar o mês"),
+        el("button", { class: "btn ghost", type: "button", onclick: () => { sinceState.hidden = true; writeVisit(todayStr()); render(); } }, "Entendi")),
+      ...parts);
+  }
+  // ao sair da página sem nada pendente para mostrar, hoje vira a "última visita"
+  // (com algo pendente, o quadro continua aparecendo até o "Entendi")
+  window.addEventListener("pagehide", () => {
+    if (!store.ready || sinceState.last === undefined) return;
+    const s = sinceInfo();
+    if (sinceState.hidden || (!s.fell.length && !s.due.length)) writeVisit(todayStr());
+  });
+
+  // Faixa de lembrete no topo: contas do mês atual vencidas ou vencendo nos próximos dias
+  function renderAlerts() {
+    const box = $("alerts"), mid = state.selected;
+    const list = mid === currentMonthId() ? entries().filter(e => e.kind === "expense" && e.day && ["late", "today", "soon"].includes(dueState(mid, e))) : [];
+    box.hidden = !list.length;
+    if (!list.length) return box.replaceChildren();
+    list.sort((a, b) => dueDay(mid, a.day) - dueDay(mid, b.day));
+    const late = list.filter(e => dueState(mid, e) === "late").length;
+    box.dataset.level = late ? "late" : "soon";
+    box.replaceChildren(
+      el("p", { class: "alerts-title" }, late ? `${countLabel(late, "conta vencida", "contas vencidas")}` + (list.length > late ? ` e ${countLabel(list.length - late, "vencendo", "vencendo")}` : "") : `${countLabel(list.length, "conta vence", "contas vencem")} ${list.every(e => dueState(mid, e) === "today") ? "hoje" : "nos próximos dias"}`),
+      el("ul", {}, ...list.map(e => {
+        const st = dueState(mid, e), c = findCtx(e.ctx)[1];
+        return el("li", { class: `due-${st}` },
+          el("span", { class: "a-name" }, e.name, c ? el("small", {}, c.name) : null),
+          el("span", { class: "daychip due-" + st, title: dueTitle(mid, e) }, dueText(mid, e, st)),
+          el("span", { class: "a-val num" }, fmt(e.value)),
+          el("button", { class: "btn", type: "button", "aria-label": `Marcar ${e.name} como paga`, onclick: () => togglePaid(e.id, mid) }, "✓ Paga"));
+      })));
+  }
+
+  // ---------- Previsão do saldo ----------
+  // Saldo dia a dia no mês: começa no saldo inicial do mês (opcional) e soma/subtrai cada registro no dia dele.
+  // Entradas sem data contam no dia 1; gastos sem data (Comida, Uber…) são espalhados igualmente pelos dias.
+  // No mês atual, conta em aberto já vencida sai "hoje" e conta paga antes do vencimento também.
+  const WEEK = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const weekday = (monthId, d) => { const [y, m] = monthId.split("-").map(Number); return WEEK[new Date(y, m - 1, d).getDay()]; };
+  const monthEnd = (id) => {
+    const m = state.months[id];
+    if (!m) return null;
+    const c = Math.round((m.opening || 0) * 100) + m.entries.reduce((s, e) => s + (e.kind === "income" ? 1 : -1) * Math.round(e.value * 100), 0);
+    return c / 100;
+  };
+  function forecast(mid) {
+    const m = state.months[mid], last = daysIn(mid), cur = currentMonthId();
+    const today = mid === cur ? new Date().getDate() : null;
+    const delta = new Array(last + 1).fill(0), events = Array.from({ length: last + 1 }, () => []);
+    let loose = 0, dated = 0;
+    for (const e of m.entries) {
+      const c = Math.round(e.value * 100);
+      if (e.kind === "income") {
+        const d = Math.min(e.day || 1, last);
+        delta[d] += c; events[d].push({ name: e.name, value: e.value, sign: 1, guess: !e.day });
+        if (e.day) dated++;
+      } else if (e.day) {
+        let d = dueDay(mid, Math.min(e.day, last));
+        if (today && ((e.paid && d > today) || (!e.paid && d < today))) d = today;
+        delta[d] -= c; events[d].push({ name: e.name, value: e.value, sign: -1, paid: !!e.paid });
+        dated++;
+      } else loose += c;
+    }
+    const spread = [];
+    for (let d = 1; d <= last; d++) {
+      const s = Math.round(loose * d / last) - Math.round(loose * (d - 1) / last);
+      spread[d] = s / 100; delta[d] -= s;
+    }
+    const opening = (m.opening || 0);
+    let bal = Math.round(opening * 100);
+    const days = [];
+    for (let d = 1; d <= last; d++) { bal += delta[d]; days.push({ d, bal: bal / 100, events: events[d], spread: spread[d] }); }
+    const min = days.reduce((a, b) => b.bal < a.bal ? b : a, days[0]);
+    const neg = [];      // trechos com saldo negativo [início, fim]
+    days.forEach(x => { if (x.bal < 0) { const r = neg[neg.length - 1]; if (r && r[1] === x.d - 1) r[1] = x.d; else neg.push([x.d, x.d]); } });
+    return { mid, last, today, opening, days, min, end: days[last - 1].bal, neg, loose: loose / 100, dated };
+  }
+
+  const BRLc = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
+  const signed = (n) => (n < 0 ? "−" : "+") + fmt(Math.abs(n));
+  const fmtBal = (n) => (n < 0 ? "−" : "") + fmt(Math.abs(n));
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const svg = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v); return e; };
+  const niceStep = (range, n) => { const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
+
+  function renderForecast() {
+    const box = $("forecast"), mid = state.selected, m = state.months[mid];
+    if (!m || !m.entries.length) { box.hidden = true; box.replaceChildren(); return; }
+    box.hidden = false;
+    const f = forecast(mid), prev = shiftMonth(mid, -1), prevEnd = monthEnd(prev);
+    const negDays = f.neg.reduce((s, [a, b]) => s + b - a + 1, 0);
+
+    // números
+    const fig = (cls, lab, big, sub) => el("div", { class: "fc-fig " + cls }, el("span", { class: "lab" }, lab), el("span", { class: "big num" + (big < 0 ? " neg" : "") }, fmtBal(big)), el("span", { class: "sub" }, sub));
+    const todayRow = f.today ? f.days[f.today - 1] : null;
+    const figs = el("div", { class: "fc-figs" },
+      todayRow ? fig("now", "Saldo hoje", todayRow.bal, `${weekday(mid, f.today)}, ${dayLabel(mid, f.today)}`) : fig("now", "Início do mês", f.opening, f.opening ? "saldo inicial" : "sem saldo inicial"),
+      fig("low", "Menor saldo", f.min.bal, `${weekday(mid, f.min.d)}, ${dayLabel(mid, f.min.d)}`),
+      fig("end", "Fim do mês", f.end, f.end < 0 ? "faltaria dinheiro" : "sobra prevista"));
+
+    // aviso de saldo negativo (ícone + texto, nunca só cor)
+    const warn = f.neg.length ? el("p", { class: "fc-warn", role: "status" }, el("b", { "aria-hidden": "true" }, "!"),
+      `O saldo fica negativo ${f.neg.map(([a, b]) => a === b ? `no dia ${a}` : `de ${dayLabel(mid, a)} a ${dayLabel(mid, b)}`).join(" e ")}` +
+      ` (${countLabel(negDays, "dia", "dias")}; o pior é ${fmtBal(f.min.bal)} em ${dayLabel(mid, f.min.d)}).` +
+      (f.end >= 0 ? " Até o fim do mês o saldo volta a ficar positivo." : "")) : null;
+
+    // saldo inicial
+    let opening;
+    if (state.fcEdit === mid) {
+      const inp = el("input", { class: "val", inputmode: "decimal", value: f.opening ? fmtPlain(f.opening) : "", placeholder: "0,00", "aria-label": "Saldo no início do mês" });
+      let done = false;
+      const commit = (save) => {
+        if (done) return; done = true;
+        if (save) {
+          const raw = inp.value.trim(), negv = /^[-−]/.test(raw), v = raw === "" ? 0 : parseMoney(raw.replace(/^[-−]\s*/, ""));
+          if (!Number.isFinite(v)) { done = false; inp.setCustomValidity("Valor inválido"); inp.reportValidity(); return; }
+          setOpening(mid, negv ? -v : v);
+        }
+        state.fcEdit = null; render();
+      };
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); });
+      inp.addEventListener("blur", () => setTimeout(() => commit(true), 0));
+      requestAnimationFrame(() => { inp.focus(); inp.select(); });
+      opening = el("div", { class: "fc-open" }, el("span", {}, "Saldo no início do mês:"), inp, el("span", { class: "small" }, "Use − para negativo. Enter salva."));
+    } else {
+      const usePrev = prevEnd !== null && Math.round(prevEnd * 100) !== Math.round(f.opening * 100)
+        ? el("button", { class: "btn ghost", type: "button", onclick: () => setOpening(mid, prevEnd, `Saldo inicial de ${monthLabel(mid)} = sobra de ${monthLabel(prev)}`) }, `Usar a sobra de ${MONTHS[Number(prev.slice(5)) - 1]} (${fmtBal(prevEnd)})`) : null;
+      opening = el("div", { class: "fc-open" },
+        el("span", {}, "Saldo no início do mês: ", el("b", { class: "num" }, fmtBal(f.opening))),
+        el("button", { class: "btn ghost", type: "button", onclick: () => { state.fcEdit = mid; render(); } }, "Alterar"),
+        usePrev);
+    }
+
+    const chart = el("div", { class: "fc-chart" });
+    const note = !f.dated
+      ? el("p", { class: "small" }, "Dica: defina o dia das entradas e o vencimento das contas para a previsão ficar exata. Sem data, as entradas contam no dia 1 e os gastos são espalhados pelo mês.")
+      : f.loose > 0 ? el("p", { class: "small" }, `Gastos sem data (${fmt(f.loose)}) foram espalhados pelo mês, cerca de ${fmt(f.loose / f.last)} por dia.`) : null;
+
+    // tabela dia a dia (também é a versão em texto do gráfico)
+    const rowsT = f.days.filter(x => x.events.length || x.d === f.today || x.d === f.min.d).map(x => el("tr", { class: (x.d === f.today ? "is-today " : "") + (x.bal < 0 ? "is-neg" : "") },
+      el("th", { scope: "row" }, `${weekday(mid, x.d)} ${dayLabel(mid, x.d)}`, x.d === f.today ? el("small", {}, " hoje") : null),
+      el("td", {}, el("div", { class: "fc-evs" }, x.events.length ? x.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}` + (ev.paid ? " (paga)" : ""))) : el("span", { class: "small" }, "sem movimento com data"))),
+      el("td", { class: "num" }, fmtBal(x.bal))));
+    const table = el("details", { class: "fc-table" }, el("summary", {}, "Ver dia a dia"),
+      el("table", {}, el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Dia"), el("th", { scope: "col" }, "Movimentos"), el("th", { scope: "col", class: "num" }, "Saldo"))), el("tbody", {}, ...rowsT)));
+    if (state.fcOpen) table.open = true;
+    table.addEventListener("toggle", () => { state.fcOpen = table.open; });
+
+    box.replaceChildren(
+      el("div", { class: "fc-head" }, el("h2", { id: "fcTitle" }, "Previsão do saldo"), el("span", { class: "small" }, monthLabel(mid))),
+      ...[figs, warn, chart, note, opening, table].filter(Boolean));
+    drawForecast(chart, f);
+  }
+
+  function setOpening(mid, v, label) {
+    const m = state.months[mid];
+    if (!m) return;
+    v = Math.round(v * 100) / 100;
+    if ((m.opening || 0) === v) return render();
+    if (v) m.opening = v; else delete m.opening;
+    store.saveMonth(mid);
+    hist.label(label || `Saldo inicial de ${monthLabel(mid)}: ${fmtBal(v)}`);
+    render();
+  }
+
+  // Gráfico em degraus do saldo: linha de 2px, faixa abaixo de zero em vermelho, marcador do menor saldo,
+  // linha de "hoje" e mira com dica ao passar o mouse (ou setas do teclado).
+  function drawForecast(host, f) {
+    const W = Math.max(280, host.clientWidth || 600), H = W < 500 ? 170 : 200;
+    const pad = { l: 58, r: 14, t: 18, b: 26 };
+    const vals = [0, f.opening, ...f.days.map(x => x.bal)];
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi === lo) hi = lo + 100;
+    const step = niceStep(hi - lo, 3);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    const x = (d) => pad.l + (d - 1) / Math.max(1, f.last - 1) * (W - pad.l - pad.r);
+    const y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `Saldo previsto em ${monthLabel(f.mid)}: começa em ${fmtBal(f.days[0].bal)}, menor saldo ${fmtBal(f.min.bal)} no dia ${f.min.d} e termina em ${fmtBal(f.end)}.` });
+    const uid2 = "fc" + Math.random().toString(36).slice(2, 7);
+    const y0 = y(0);
+    const defs = svg("defs");
+    const cpA = svg("clipPath", { id: uid2 + "a" }); cpA.append(svg("rect", { x: 0, y: 0, width: W, height: Math.max(0, y0) }));
+    const cpB = svg("clipPath", { id: uid2 + "b" }); cpB.append(svg("rect", { x: 0, y: y0, width: W, height: Math.max(0, H - y0) }));
+    defs.append(cpA, cpB); s.append(defs);
+    // grade e eixo y
+    for (let v = lo; v <= hi + step / 2; v += step) {
+      s.append(svg("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), class: v === 0 ? "fc-zero" : "fc-grid" }));
+      const t = svg("text", { x: pad.l - 8, y: y(v) + 4, class: "fc-axis", "text-anchor": "end" }); t.textContent = Math.abs(v) < 0.005 ? "R$ 0" : (v < 0 ? "−" : "") + BRLc.format(Math.abs(v)); s.append(t);
+    }
+    // eixo x
+    const ticks = [...new Set([1, 5, 10, 15, 20, 25, f.last])].filter(d => d <= f.last && (d === f.last || f.last - d >= 3));
+    for (const d of ticks) { const t = svg("text", { x: x(d), y: H - 6, class: "fc-axis", "text-anchor": d === 1 ? "start" : d === f.last ? "end" : "middle" }); t.textContent = String(d); s.append(t); }
+    // linha em degraus (o saldo muda no dia e fica até o próximo)
+    let dLine = `M ${x(1)} ${y(f.days[0].bal)}`;
+    for (let i = 1; i < f.days.length; i++) dLine += ` H ${x(f.days[i].d)} V ${y(f.days[i].bal)}`;
+    const dArea = `${dLine} V ${y0} H ${x(1)} Z`;
+    s.append(svg("path", { d: dArea, class: "fc-area", "clip-path": `url(#${uid2}a)` }));
+    s.append(svg("path", { d: dArea, class: "fc-area neg", "clip-path": `url(#${uid2}b)` }));
+    s.append(svg("path", { d: dLine, class: "fc-line", "clip-path": `url(#${uid2}a)` }));
+    s.append(svg("path", { d: dLine, class: "fc-line neg", "clip-path": `url(#${uid2}b)` }));
+    // hoje
+    if (f.today) {
+      s.append(svg("line", { x1: x(f.today), x2: x(f.today), y1: pad.t - 6, y2: H - pad.b, class: "fc-today" }));
+      const t = svg("text", { x: x(f.today), y: pad.t - 8, class: "fc-axis fc-today-lab", "text-anchor": x(f.today) > W - 40 ? "end" : x(f.today) < pad.l + 20 ? "start" : "middle" }); t.textContent = "hoje"; s.append(t);
+    }
+    // menor saldo: marcador e rótulo direto
+    const mx = x(f.min.d), my = y(f.min.bal);
+    s.append(svg("circle", { cx: mx, cy: my, r: 4.5, class: "fc-dot" + (f.min.bal < 0 ? " neg" : "") }));
+    const ml = svg("text", { x: mx, y: my + (my > H - pad.b - 22 ? -10 : 18), class: "fc-label", "text-anchor": mx > W - 90 ? "end" : mx < pad.l + 60 ? "start" : "middle" });
+    ml.textContent = `menor: ${fmtBal(f.min.bal)}`; s.append(ml);
+    // mira + dica
+    const cross = svg("line", { y1: pad.t, y2: H - pad.b, class: "fc-cross", visibility: "hidden" });
+    const hot = svg("circle", { r: 4.5, class: "fc-dot", visibility: "hidden" });
+    s.append(cross, hot);
+    const tip = el("div", { class: "fc-tip", hidden: true, role: "status" });
+    const hit = svg("rect", { x: pad.l - 6, y: 0, width: W - pad.l - pad.r + 12, height: H, fill: "transparent", tabindex: "0", "aria-label": "Use as setas para ver o saldo de cada dia" });
+    s.append(hit);
+    let cur = null;
+    const show = (d) => {
+      d = Math.max(1, Math.min(f.last, d)); cur = d;
+      const r = f.days[d - 1], px = x(d), py = y(r.bal);
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+      hot.setAttribute("cx", px); hot.setAttribute("cy", py); hot.setAttribute("class", "fc-dot" + (r.bal < 0 ? " neg" : "")); hot.setAttribute("visibility", "visible");
+      tip.replaceChildren(el("b", {}, `${weekday(f.mid, d)}, ${dayLabel(f.mid, d)}`), el("span", {}, "Saldo: ", el("b", { class: "num" + (r.bal < 0 ? " neg" : "") }, fmtBal(r.bal))),
+        ...r.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}`)),
+        r.spread ? el("span", { class: "fc-ev out" }, `${signed(-r.spread)} gastos sem data`) : null);
+      tip.hidden = false;
+      const tw = tip.offsetWidth || 180;
+      tip.style.left = Math.min(Math.max(0, px - tw / 2), W - tw) + "px";
+      tip.style.top = (py > H / 2 ? Math.max(0, py - tip.offsetHeight - 14) : py + 14) + "px";
+    };
+    const hide = () => { cur = null; tip.hidden = true; cross.setAttribute("visibility", "hidden"); hot.setAttribute("visibility", "hidden"); };
+    const dayAt = (ev) => { const b = s.getBoundingClientRect(); const px = (ev.clientX - b.left) * (W / b.width); return Math.round((px - pad.l) / (W - pad.l - pad.r) * (f.last - 1)) + 1; };
+    hit.addEventListener("pointermove", (ev) => show(dayAt(ev)));
+    hit.addEventListener("pointerdown", (ev) => show(dayAt(ev)));
+    hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", () => show(f.today || f.min.d));
+    hit.addEventListener("blur", hide);
+    hit.addEventListener("keydown", (ev) => {
+      // sem dia escolhido ainda, a primeira seta mostra hoje (ou o dia do menor saldo)
+      if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") { ev.preventDefault(); show(cur ? cur + (ev.key === "ArrowRight" ? 1 : -1) : (f.today || f.min.d)); }
+      if (ev.key === "Escape") hide();
+    });
+    host.replaceChildren(s, tip);
+  }
+  // largura nova: redesenha só o gráfico
+  let fcResize = 0;
+  window.addEventListener("resize", () => { clearTimeout(fcResize); fcResize = setTimeout(() => { const h = document.querySelector("#forecast .fc-chart"); if (h && state.selected && state.months[state.selected] && !$("forecast").hidden) drawForecast(h, forecast(state.selected)); }, 150); });
+
   function renderSummary() {
     const es = entries();
     const tin = sumMoney(es.filter(e => e.kind === "income").map(e => e.value));
@@ -907,8 +1568,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("fOut").textContent = fmt(tout);
     $("fLeft").textContent = fmt(left);
     $("fLeft").className = "big" + (left < 0 ? " neg" : "");
-    $("fInSub").textContent = countLabel(es.filter(e => e.kind === "income").length, "entrada", "entradas");
-    $("fOutSub").textContent = tin > 0 ? `${Math.round(tout / tin * 100)}% do que entrou` : countLabel(es.filter(e => e.kind === "expense").length, "saída", "saídas");
+    $("fInSub").textContent = incomeTimeline(es) || countLabel(es.filter(e => e.kind === "income").length, "entrada", "entradas");
+    const bills = billsSummary(es);
+    $("fOutSub").textContent = (tin > 0 ? `${Math.round(tout / tin * 100)}% do que entrou` : countLabel(es.filter(e => e.kind === "expense").length, "saída", "saídas")) + (bills ? ` · ${bills}` : "");
     $("fLeftSub").textContent = left < 0 ? "Gastou mais do que ganhou" : tin > 0 ? `${Math.round(left / tin * 100)}% da renda livre` : "Registre uma entrada para ver o saldo";
 
     const byCtx = totalsBy("expense");
@@ -948,7 +1610,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function card(kind, c, sum, base) {
     const k = colorOf(kind, c);
-    const items = entries().filter(e => e.ctx === c.id);
+    // com datas de recebimento, os registros aparecem na ordem em que caem no mês
+    const items = entries().filter(e => e.ctx === c.id).map((e, i) => [e, i])
+      .sort(([a, i], [b, j]) => (a.day || 99) - (b.day || 99) || i - j).map(([e]) => e);
     const share = base > 0 ? Math.min(sum / base * 100, 100) : 0;
     const draft = state.drafts[c.id] || { name: "", value: "" };
     const menuOpen = state.menu === c.id;
@@ -957,35 +1621,83 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const head = el("div", { class: "card-head" },
       canMove ? el("button", { class: "drag-handle", type: "button", tabindex: "-1", "aria-hidden": "true", title: "Arraste para mover", onpointerdown: (ev) => startDrag(ev, kind, c.id) }, "⠿") : el("span"),
       el("div", { class: "card-title" }, el("i"), el("span", { title: c.name }, c.name),
-        isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null),
+        isRepeat(c) ? el("b", { class: "repeat", title: "Repete no próximo mês" }, "↻") : null,
+        payOn(c) ? payBadge(c) : null),
       el("span", { class: "card-total" }, fmt(sum)),
       el("button", { class: "iconbtn trash", "aria-label": `Excluir a tabela ${c.name}`, title: "Excluir tabela", onclick: () => deleteCtx(kind, c.id) }, trashIcon()),
-      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; render(); } }, "⋯"));
+      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; state.payDraft = null; render(); } }, "⋯"));
 
     const rows = items.length
       ? el("ul", { class: "rows" }, ...items.map(e => row(e)))
       : el("div", { class: "empty-rows" }, kind === "income" ? "Nenhuma entrada neste mês." : "Nenhum gasto neste mês.");
 
     // linha de inclusão
-    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? "Nova entrada" : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
-    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: "0,00", "aria-label": `Valor em ${c.name}`, value: draft.value });
+    const splitN = payOn(c) && c.pay.parts.length > 1 ? c.pay.parts.length : 0;
+    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (divide em ${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
+    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
     const err = el("p", { class: "adder-err", hidden: true });
     const sync = () => { state.drafts[c.id] = { name: nameIn.value, value: valIn.value }; };
     nameIn.addEventListener("input", sync); valIn.addEventListener("input", sync);
     nameIn.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !valIn.value) { ev.preventDefault(); valIn.focus(); } });
-    const adder = el("form", { class: "adder", "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
+    // "Parcelar no cartão" (só nas saídas): o valor digitado vira o total da compra
+    const inst = kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? state.instDraft : null;
+    let instBox = null;
+    if (kind === "expense") {
+      const toggle = el("button", { type: "button", class: "insttoggle", "aria-pressed": String(!!inst), "aria-expanded": String(!!inst), onclick: () => {
+        state.instDraft = inst ? null : { ctx: c.id, n: "10", start: "this", day: "" };
+        state.focusAdder = c.id; render();
+      } }, inst ? "× Lançamento comum" : "Parcelar no cartão");
+      if (!inst) instBox = el("div", { class: "instrow" }, toggle);
+      else {
+        const nIn = el("input", { class: "instn", type: "number", min: "2", max: "120", inputmode: "numeric", value: inst.n, "aria-label": "Número de parcelas" });
+        const start = el("select", { "aria-label": "Primeira parcela" }, el("option", { value: "this" }, "a partir deste mês"), el("option", { value: "next" }, "a partir do próximo mês"));
+        start.value = inst.start;
+        const dayIn = el("input", { class: "instday", type: "number", min: "1", max: "31", inputmode: "numeric", placeholder: "—", value: inst.day, "aria-label": "Dia do vencimento da fatura", title: "Dia em que a fatura vence (opcional)" });
+        const preview = el("p", { class: "instprev", "aria-live": "polite" });
+        const upd = () => {
+          inst.n = nIn.value; inst.start = start.value; inst.day = dayIn.value;
+          const n = parseInt(nIn.value, 10), total = parseMoney(valIn.value);
+          if (!(n >= 2 && n <= 120)) { preview.textContent = "De 2 a 120 parcelas."; return; }
+          if (!(total > 0)) { preview.textContent = "Digite o valor total da compra."; return; }
+          const first = start.value === "next" ? shiftMonth(state.selected, 1) : state.selected;
+          const p = { total, n, first };
+          const v1 = instValue(p, 1), vk = instValue(p, 2);
+          preview.textContent = `${n}x de ${fmt(vk)}` + (v1 !== vk ? ` (1ª de ${fmt(v1)})` : "") + ` · de ${shortMonthLabel(first)} a ${shortMonthLabel(planLast(p))}`;
+        };
+        [nIn, dayIn].forEach(i => i.addEventListener("input", upd)); start.addEventListener("change", upd); valIn.addEventListener("input", upd);
+        upd();
+        instBox = el("div", { class: "instrow on" }, toggle,
+          el("div", { class: "instopts" }, el("label", {}, nIn, "x"), start, el("label", { title: "Dia em que a fatura vence (opcional)" }, "vence dia ", dayIn)), preview);
+      }
+    }
+    const adder = el("form", { class: "adder" + (inst ? " inst" : ""), "data-ctx": c.id, autocomplete: "off", onsubmit: (ev) => {
       ev.preventDefault();
       const name = nameIn.value.trim(), value = parseMoney(valIn.value);
       if (!name) { err.textContent = "Escreva o nome do item."; err.hidden = false; nameIn.focus(); return; }
       if (!(value > 0)) { err.textContent = "Valor inválido. Use por exemplo 45,90."; err.hidden = false; valIn.focus(); return; }
-      state.months[state.selected].entries.push({ id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
+      if (inst) {
+        const n = parseInt(inst.n, 10), day = parseInt(inst.day, 10);
+        if (!(n >= 2 && n <= 120)) { err.textContent = "Número de parcelas: de 2 a 120."; err.hidden = false; return; }
+        const p = { id: uid(), name: name.slice(0, 100), ctx: c.id, total: value, n, first: inst.start === "next" ? shiftMonth(state.selected, 1) : state.selected, at: Date.now() };
+        if (day >= 1 && day <= 31) p.day = day;
+        state.plans = [...state.plans, p];
+        store.savePlans();
+        materializePlan(p);
+        delete state.drafts[c.id]; state.instDraft = null;
+        state.focusAdder = c.id;
+        render();
+        showToast(`"${name}" em ${n}x de ${fmt(instValue(p, 2))}` + (p.first !== state.selected ? `, a partir de ${monthLabel(p.first)}` : ""), 8000);
+        return;
+      }
+      const added = splitEntry(state.selected, c, { id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
+      state.months[state.selected].entries.push(...added);
       delete state.drafts[c.id];
       store.saveMonth(state.selected);
-      hist.label(`"${name}" adicionado em ${c.name}`);
+      hist.label(`"${name}" adicionado em ${c.name}` + (added.length > 1 ? `, dividido em ${added.length} datas` : ""));
       state.focusAdder = c.id;
       render();
-    } }, nameIn, valIn, addBtn, err);
+    } }, nameIn, valIn, addBtn, err, instBox);
 
     return el("article", { class: "card", "data-id": c.id, style: `--k:${k}` },
       head,
@@ -1000,26 +1712,45 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (editing) {
       const n = el("input", { type: "text", value: e.name, maxlength: "120", "aria-label": "Nome" });
       const v = el("input", { class: "val", inputmode: "decimal", value: fmtPlain(e.value), "aria-label": "Valor" });
+      // entradas têm o dia em que caem (vazio = sem data)
+      // nas saídas, o dia do vencimento
+      const isIn = e.kind === "income";
+      const dIn = el("input", { class: "day", type: "number", min: "1", max: String(daysIn(state.selected)), inputmode: "numeric", placeholder: isIn ? "dia" : "venc.", value: e.day ? String(e.day) : "",
+        "aria-label": isIn ? "Dia do recebimento" : "Dia do vencimento", title: isIn ? "Dia em que o dinheiro cai (vazio = sem data)" : "Dia em que a conta vence, todo mês (vazio = sem vencimento)" });
       let done = false;
       const commit = (save) => {
         if (done) return; done = true;
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
-          if (t && name && value > 0 && (name !== t.name || value !== t.value)) { t.name = name; t.value = value; store.saveMonth(state.selected); hist.label(`"${name}" editado`); }
+          let day = t ? t.day : undefined;
+          if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= daysIn(state.selected) ? dv : undefined; }
+          if (t && name && value > 0 && (name !== t.name || value !== t.value || day !== t.day)) {
+            if (day !== t.day) { delete t.part; if (day) t.day = day; else { delete t.day; delete t.paid; } }   // dia escolhido à mão deixa de seguir a regra
+            t.name = name; t.value = value;
+            store.saveMonth(state.selected); hist.label(`"${name}" editado`);
+          }
         }
         state.edit = null; render();
       };
       const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); };
-      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys);
-      const li = el("li", { class: "row" }, n, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
+      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); if (dIn) dIn.addEventListener("keydown", keys);
+      const li = el("li", { class: "row" + (dIn ? " with-day" : "") }, n, dIn, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
       li.addEventListener("focusout", () => setTimeout(() => { if (!li.contains(document.activeElement)) commit(true); }, 0));
       requestAnimationFrame(() => { const t = state.edit && state.edit.field === "value" ? v : n; t.focus(); t.select(); });
       return li;
     }
     const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
-    return el("li", { class: "row" },
-      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name),
+    const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
+    let chip = null, check = null;
+    if (e.day && e.kind === "income") chip = el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day));
+    else if (e.day) {
+      const st = dueState(state.selected, e);
+      chip = el("span", { class: `daychip due-${st}`, title: dueTitle(state.selected, e) }, dueText(state.selected, e, st));
+      check = el("button", { class: "paycheck", type: "button", "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
+    }
+    return el("li", { class: "row" + (check ? " has-check" : "") + (e.paid ? " is-paid" : "") }, check,
+      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name, chip),
       el("button", { class: "cell val", title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
       el("button", { class: "iconbtn del", "aria-label": `Remover ${e.name}`, title: "Remover", onclick: () => removeEntry(e.id) }, "×"));
   }
@@ -1047,9 +1778,88 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("span", { class: "small" }, "Cor"), swatches,
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); hist.label(`"${t.name}" ${t.repeat ? "passou a repetir" : "deixou de repetir"} no próximo mês`); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
+      kind === "income" ? payMenu(c) : null,
       el("div", { class: "menu-actions" },
         el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
         el("button", { class: "btn solid", onclick: save }, "Concluir")));
+  }
+
+  // Bloco "Datas de recebimento" no menu ⋯ das tabelas de entradas.
+  // As mudanças ficam num rascunho (state.payDraft) e só são gravadas quando as porcentagens somam 100%.
+  const fmtPct = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")}%`;
+  function payMenu(c) {
+    const cur = () => ctxs("income").find(x => x.id === c.id) || c;
+    if (!state.payDraft || state.payDraft.ctx !== c.id) state.payDraft = { ctx: c.id, pay: clone(c.pay) || null };
+    const d = state.payDraft;
+    const pctSum = (p) => p.parts.reduce((s, x) => s + Math.round(x.pct * 100), 0) / 100;
+    const changed = `Datas de recebimento de "${c.name}" alteradas`;
+    const commit = (label) => {
+      if (d.pay && Math.abs(pctSum(d.pay) - 100) > 0.001) { render(); return; }   // ainda não fecha 100%: só redesenha
+      const t = cur();
+      if (sameJson(t.pay || null, d.pay)) { render(); return; }
+      t.pay = clone(d.pay);
+      store.saveSettings(); hist.label(label || changed); render();
+    };
+    const toggle = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!(d.pay && d.pay.on)), onclick: () => {
+      if (!d.pay) d.pay = newPay(); else d.pay.on = !d.pay.on;
+      commit(`Datas de recebimento de "${c.name}" ${d.pay.on ? "ligadas" : "desligadas"}`);
+    } }, el("span", { class: "box" }, "✓"), "Dividir em datas de recebimento");
+    if (!d.pay || !d.pay.on) return el("div", { class: "paybox" }, toggle,
+      el("p", { class: "small" }, "Ex.: salário com 60% no 5º dia útil e 40% no dia 20. Cada valor lançado é dividido nas datas."));
+
+    const p = d.pay, mid = state.selected;
+    const lines = p.parts.map((x, i) => {
+      const set = (k, v) => { x[k] = v; commit(); };
+      const type = el("select", { "aria-label": "Tipo de data", onchange: (ev) => { x.type = ev.target.value; x.n = Math.min(x.n, x.type === "util" ? 23 : 31); commit(); } },
+        el("option", { value: "util" }, "dia útil"), el("option", { value: "dia" }, "dia fixo"));
+      type.value = x.type;
+      const n = el("input", { class: "payn", type: "number", min: "1", max: x.type === "util" ? "23" : "31", value: String(x.n), "aria-label": x.type === "util" ? "Qual dia útil" : "Dia do mês",
+        onchange: (ev) => { const v = parseInt(ev.target.value, 10); if (v >= 1 && v <= (x.type === "util" ? 23 : 31)) set("n", v); else render(); } });
+      const pct = el("input", { class: "paypct", type: "text", inputmode: "decimal", value: String(x.pct).replace(".", ","), "aria-label": "Porcentagem",
+        onchange: (ev) => { const v = Number(String(ev.target.value).replace("%", "").replace(",", ".").trim()); if (ev.target.value.trim() !== "" && v >= 0 && v <= 100) set("pct", Math.round(v * 100) / 100); else render(); } });
+      const adjust = x.type === "dia" ? el("select", { "aria-label": "Se cair em fim de semana ou feriado", title: "Se cair em fim de semana ou feriado", onchange: (ev) => set("adjust", ev.target.value) },
+        el("option", { value: "antes" }, "antecipa"), el("option", { value: "depois" }, "adia"), el("option", { value: "manter" }, "mantém")) : null;
+      if (adjust) adjust.value = x.adjust || "antes";
+      const when = mid ? el("span", { class: "paywhen num", title: `Em ${monthLabel(mid)}` }, "→ " + dayLabel(mid, payDay(mid, x, p.sat))) : null;
+      const del = p.parts.length > 1 ? el("button", { class: "iconbtn", type: "button", "aria-label": `Remover ${partLabel(x)}`, title: "Remover data", onclick: () => {
+        p.parts.splice(i, 1);
+        if (p.parts.length === 1) p.parts[0].pct = 100;
+        commit();
+      } }, "×") : null;
+      return el("div", { class: "payline" }, type, n, el("span", { class: "pctwrap" }, pct, "%"), del || el("span"),
+        el("div", { class: "paysub" }, adjust, when));
+    });
+    const sum = pctSum(p);
+    const add = p.parts.length < PAY_MAX ? el("button", { class: "btn", type: "button", onclick: () => {
+      const rest = Math.max(0, Math.round((100 - sum) * 100) / 100);
+      p.parts.push({ id: uid(), type: "dia", n: 15, pct: rest, adjust: "antes" });
+      commit();
+    } }, "+ Data") : null;
+    const sat = el("button", { class: "toggle", type: "button", "aria-pressed": String(!!p.sat), title: "Pela CLT o sábado conta como dia útil para o pagamento do salário; muitas empresas contam só de segunda a sexta", onclick: () => { p.sat = !p.sat; commit(`Sábado ${p.sat ? "passou a contar" : "deixou de contar"} como dia útil em "${c.name}"`); } },
+      el("span", { class: "box" }, "✓"), "Sábado conta como dia útil");
+    // registros deste mês lançados antes de ligar a divisão
+    const loose = mid && state.months[mid] ? state.months[mid].entries.filter(e => e.ctx === c.id && !e.part) : [];
+    const ready = Math.abs(sum - 100) < 0.001 && sameJson(cur().pay || null, p);
+    const splitNow = loose.length && ready ? el("button", { class: "btn", type: "button", onclick: () => {
+      const t = cur();
+      state.months[mid].entries = state.months[mid].entries.flatMap(e => e.ctx === c.id && !e.part ? splitEntry(mid, t, e) : [e]);
+      store.saveMonth(mid); hist.label(`${countLabel(loose.length, "item dividido", "itens divididos")} em "${c.name}"`);
+      state.menu = null; state.payDraft = null; render();
+    } }, `Dividir ${loose.length === 1 ? "o item" : `os ${loose.length} itens`} deste mês nas datas`) : null;
+    return el("div", { class: "paybox" }, toggle,
+      el("span", { class: "small" }, `Datas de recebimento${mid ? ` (→ dia em ${monthLabel(mid)})` : ""}`),
+      ...lines,
+      el("div", { class: "payfoot" }, add, sat),
+      Math.abs(sum - 100) > 0.001 ? el("p", { class: "warn" }, `As porcentagens somam ${fmtPct(sum)}: ajuste para dar 100% (a mudança só é salva assim).`) : null,
+      splitNow);
+  }
+
+  // Ícone de calendário no título da tabela, com o número de datas (detalhes no title)
+  function payBadge(c) {
+    const b = el("b", { class: "repeat paybadge", title: "Recebe em: " + c.pay.parts.map(p => `${partLabel(p)} (${fmtPct(p.pct)})`).join(" + "), "aria-label": `Recebe em ${countLabel(c.pay.parts.length, "data", "datas")}` });
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+    if (c.pay.parts.length > 1) b.append(String(c.pay.parts.length));
+    return b;
   }
 
   function trashIcon() {
@@ -1087,6 +1897,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       state.months[m].entries = es.filter(e => e.ctx !== id);
     }
     state.settings[kind] = list.filter(x => x.id !== id);
+    if (state.plans.some(p => p.ctx === id)) { state.plans = state.plans.filter(p => p.ctx !== id); store.savePlans(); }
     delete state.drafts[id];
     if (state.menu === id) state.menu = null;
     if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
@@ -1122,7 +1933,317 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       sugg.length ? el("div", { class: "suggest" }, ...sugg.map(s => el("button", { type: "button", onclick: () => add(s) }, s))) : null);
   }
 
+  // Seção "Compras parceladas": compras que ainda têm parcela no mês aberto ou depois dele
+  function renderPlans() {
+    const box = $("secInst"), mid = state.selected;
+    const list = state.plans.filter(p => findCtx(p.ctx)[1] && planLast(p) >= mid && (!p.until || p.until >= mid))
+      .sort((a, b) => planLast(a).localeCompare(planLast(b)) || a.name.localeCompare(b.name));
+    box.hidden = !list.length;
+    if (!list.length) return box.replaceChildren();
+    const monthly = sumMoney(list.filter(p => planActive(p, mid)).map(p => instValue(p, planK(p, mid))));
+    const owed = sumMoney(list.map(p => { const k = planK(p, mid); return k < 1 ? p.total : instLeft(p, k); }));
+    box.replaceChildren(
+      el("div", { class: "sec-head" }, el("h2", { id: "hInst" }, "Compras parceladas ", el("span", { class: "tag" }, String(list.length))),
+        el("span", { class: "small" }, `${fmt(monthly)} neste mês · ${fmt(owed)} nos próximos meses`)),
+      el("ul", { class: "instlist" }, ...list.map(p => {
+        const k = planK(p, mid), c = findCtx(p.ctx)[1], left = k < 1 ? p.total : instLeft(p, k);
+        const status = k < 1 ? `começa em ${monthLabel(p.first)}` : `parcela ${k} de ${p.n} neste mês`;
+        const pct = Math.min(100, Math.max(0, k) / p.n * 100);
+        return el("li", { class: "inst", style: `--k:${colorOf("expense", c)}` },
+          el("div", { class: "inst-main" },
+            el("b", {}, p.name), el("span", { class: "small" }, `${c.name} · ${p.n}x de ${fmt(instValue(p, 2))} · total ${fmt(p.total)}` + (p.day ? ` · vence dia ${p.day}` : "")),
+            el("div", { class: "inst-bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(p.n), "aria-valuenow": String(Math.max(0, k)), "aria-label": `${Math.max(0, k)} de ${p.n} parcelas` }, el("i", { style: `width:${pct}%` })),
+            el("span", { class: "small" }, `${status} · ${left > 0 ? `faltam ${fmt(left)}` : "última parcela"} · termina em ${monthLabel(planLast(p))}`)),
+          el("div", { class: "inst-actions" },
+            k >= 1 && k < p.n ? el("button", { class: "btn", type: "button", onclick: () => payOffPlan(p.id) }, "Antecipar o resto") : null,
+            el("button", { class: "btn ghost danger", type: "button", onclick: () => deletePlan(p.id) }, "Excluir compra")));
+      })));
+  }
+  // Antecipa as parcelas que faltam: um registro com o valor restante no mês aberto e nada depois dele
+  async function payOffPlan(id) {
+    const p = state.plans.find(x => x.id === id), mid = state.selected;
+    if (!p) return;
+    const k = planK(p, mid), left = instLeft(p, k);
+    const ok = await confirmDialog({ title: `Antecipar "${p.name}"?`, text: `As ${p.n - k} parcelas que faltam viram um único pagamento em ${monthLabel(mid)}, e somem dos meses seguintes.`,
+      details: [["Parcelas antecipadas", `${k + 1} a ${p.n}`], ["Valor", fmt(left)]], ok: "Antecipar" });
+    const t = state.plans.find(x => x.id === id);
+    if (!ok || !t || !state.months[mid]) return;
+    for (const m of monthIds()) {
+      if (m <= mid) continue;
+      const es = state.months[m].entries;
+      if (es.some(e => e.inst && e.inst.plan === id)) { state.months[m].entries = es.filter(e => !(e.inst && e.inst.plan === id)); store.saveMonth(m); }
+    }
+    state.months[mid].entries.push({ id: uid(), kind: "expense", ctx: t.ctx, name: `${t.name} (antecipação ${k + 1}–${t.n}/${t.n})`, value: left, at: Date.now(), inst: { plan: id, k: 0 } });
+    store.saveMonth(mid);
+    state.plans = state.plans.map(x => x.id === id ? { ...x, until: mid } : x);
+    store.savePlans();
+    render();
+    showToast(`"${t.name}" antecipada: ${fmt(left)} em ${monthLabel(mid)}`, 10000);
+  }
+  // Exclui a compra e todas as parcelas dela, em todos os meses
+  async function deletePlan(id) {
+    const p = state.plans.find(x => x.id === id);
+    if (!p) return;
+    const hits = monthIds().filter(m => state.months[m].entries.some(e => e.inst && e.inst.plan === id));
+    const ok = await confirmDialog({ title: `Excluir a compra "${p.name}"?`, text: "A compra sai da lista e as parcelas dela são apagadas de todos os meses.",
+      details: [["Parcelas lançadas", String(hits.length)], ["Total da compra", fmt(p.total)]], ok: "Excluir compra" });
+    if (!ok || !state.plans.some(x => x.id === id)) return;
+    for (const m of hits) { state.months[m].entries = state.months[m].entries.filter(e => !(e.inst && e.inst.plan === id)); store.saveMonth(m); }
+    state.plans = state.plans.filter(x => x.id !== id);
+    store.savePlans();
+    render();
+    showToast(`Compra "${p.name}" excluída`, 10000);
+  }
+
+  // ---------- Importar extrato (OFX / CSV) ----------
+  // Lê o arquivo do banco ou da fatura, mostra uma prévia e lança cada transação no mês da data dela.
+  // A tabela de cada linha vem, nesta ordem: das regras ("contém X" -> tabela), do histórico (mesmo nome já
+  // lançado antes) ou da escolha na prévia; o que foi escolhido à mão pode virar regra nova.
+  // Cada registro importado guarda "ext" (FITID do OFX ou data|valor|descrição) para não entrar duas vezes.
+  const rulesOf = () => (state.settings.rules || []).filter(r => findCtx(r.ctx)[1]);
+  const decodeEnt = (s) => s.replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'");
+  function parseOFX(text) {
+    const out = [];
+    for (const raw of text.split(/<STMTTRN>/i).slice(1)) {
+      const b = raw.split(/<\/STMTTRN>/i)[0];
+      const tag = (t) => { const m = b.match(new RegExp(`<${t}>([^<\\r\\n]*)`, "i")); return m ? decodeEnt(m[1].trim()) : ""; };
+      const amount = Number(tag("TRNAMT").replace(",", ".")), dt = tag("DTPOSTED");
+      if (!Number.isFinite(amount) || !/^\d{8}/.test(dt)) continue;
+      const name = tag("NAME"), memo = tag("MEMO");
+      const desc = name && memo && !plainName(memo).includes(plainName(name)) && !plainName(name).includes(plainName(memo)) ? `${name} ${memo}` : (memo.length > name.length ? memo : name);
+      out.push({ date: `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}`, desc: desc || "Sem descrição", amount, fitid: tag("FITID") });
+    }
+    return out;
+  }
+  function splitCSV(line, d) {
+    const out = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+      else if (ch === '"') q = true; else if (ch === d) { out.push(cur); cur = ""; } else cur += ch;
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+  function parseAmount(s) {
+    s = String(s || "").replace(/R\$|\s/g, "");
+    if (!s) return NaN;
+    const neg = /^-|^\(.*\)$|-$/.test(s);
+    s = s.replace(/[()+-]/g, "");
+    if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(/,/g, "");
+    const n = Number(s);
+    return Number.isFinite(n) ? (neg ? -n : n) : NaN;
+  }
+  function parseDate(s) {
+    s = String(s || "").trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+    return null;
+  }
+  // devolve { rows, card } ou { error }
+  function parseCSV(text) {
+    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return { error: "O arquivo não tem linhas suficientes." };
+    const first = lines[0], d = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+    const head = splitCSV(first, d).map(h => plainName(h));
+    const find = (re, not) => head.findIndex(h => re.test(h) && !(not && not.test(h)));
+    const iDate = find(/^(data|date|dt)\b|data/), iDesc = find(/descri|historico|title|titulo|estabelecimento|lancamento|memo|nome|detalhe/, /^data/), iAmt = find(/^(valor|amount|value|quantia)|valor/, /saldo/);
+    if (iDate < 0 || iAmt < 0) return { error: "Não achei as colunas de data e valor. O CSV precisa ter cabeçalho com \"Data\" e \"Valor\" (ou date/amount)." };
+    const rows = [];
+    for (const l of lines.slice(1)) {
+      const c = splitCSV(l, d), date = parseDate(c[iDate]), amount = parseAmount(c[iAmt]);
+      if (!date || !Number.isFinite(amount) || amount === 0) continue;
+      const desc = (iDesc >= 0 ? c[iDesc] : "") || c.filter((_, i) => i !== iDate && i !== iAmt).find(x => x && /[a-z]/i.test(x)) || "Sem descrição";
+      rows.push({ date, desc, amount });
+    }
+    // fatura de cartão (ex.: Nubank "date,title,amount"): valor positivo é gasto
+    const card = head.includes("title") && head.includes("amount");
+    return rows.length ? { rows, card } : { error: "Nenhuma transação válida no arquivo." };
+  }
+  const STOP = new Set(["pix", "compra", "compras", "pagamento", "pagto", "pag", "transferencia", "transf", "ted", "doc", "debito", "credito", "cartao", "enviado", "enviada", "recebido", "recebida", "pelo", "pela", "de", "da", "do", "das", "dos", "em", "no", "na", "para", "com", "conta", "boleto", "tarifa", "aplicacao", "resgate", "ltda", "s/a", "sa", "me", "eireli", "visa", "master", "elo", "int", "nacional"]);
+  const learnKey = (desc) => (plainName(desc).match(/[a-z0-9]+/g) || []).find(w => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w)) || null;
+  const prettyName = (s) => {
+    s = s.replace(/\s+/g, " ").trim().slice(0, 120);
+    return s === s.toUpperCase() && /[A-Z]/.test(s) ? s.toLowerCase().replace(/(^|[\s*/(\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : s;
+  };
+  // tabela sugerida: regra > histórico (mesmo nome já lançado) > nenhuma
+  function suggest(kind, desc) {
+    const pd = plainName(desc);
+    const r = rulesOf().find(r => pd.includes(plainName(r.match)) && findCtx(r.ctx)[0] === kind);
+    if (r) return { ctx: r.ctx, name: r.name || prettyName(desc), how: "regra", rule: r.id };
+    const pn = plainName(prettyName(desc));
+    for (const m of monthIds().slice().reverse()) {
+      const e = state.months[m].entries.find(e => e.kind === kind && !e.ext && plainName(e.name) === pn && findCtx(e.ctx)[1]) ||
+        state.months[m].entries.find(e => e.kind === kind && e.ext && plainName(e.name) === pn && findCtx(e.ctx)[1]);
+      if (e) return { ctx: e.ctx, name: e.name, how: "histórico" };
+    }
+    return { ctx: "", name: prettyName(desc), how: "" };
+  }
+  const imp = { rows: [], card: false, learn: true, file: "", error: "" };
+  function buildRows(parsed, isOfx) {
+    imp.rows = parsed.map((t, i) => {
+      const amt = imp.card ? -t.amount : t.amount;
+      const kind = amt < 0 ? "expense" : "income", value = Math.round(Math.abs(amt) * 100) / 100;
+      const month = t.date.slice(0, 7), day = Number(t.date.slice(8, 10));
+      const ext = (t.fitid ? `ofx:${t.fitid}` : `csv:${t.date}|${amt.toFixed(2)}|${plainName(t.desc).replace(/\s+/g, " ")}`).slice(0, 80);
+      const sg = suggest(kind, t.desc);
+      const es = state.months[month] ? state.months[month].entries : [];
+      const dup = es.some(e => e.ext === ext) || es.some(e => e.kind === kind && Math.round(e.value * 100) === Math.round(value * 100) && e.day === day && plainName(e.name) === plainName(sg.name));
+      const billPay = /pagamento.*fatura|pagamento recebido|pagto fatura|fatura paga/i.test(plainName(t.desc));
+      const missing = !state.months[month];
+      return { i, date: t.date, month, day, desc: t.desc, kind, value, ext, name: sg.name, ctx: sg.ctx, how: sg.how, rule: sg.rule, dup, missing, billPay, touched: false,
+        on: !dup && !missing && !billPay && !!sg.ctx };
+    });
+    imp.isOfx = isOfx;
+  }
+  function reSuggest() {
+    imp.rows.forEach(r => { if (r.touched) return; const sg = suggest(r.kind, r.desc); r.ctx = sg.ctx; r.name = sg.name; r.how = sg.how; r.rule = sg.rule; if (!r.dup && !r.missing && !r.billPay) r.on = !!sg.ctx; });
+  }
+  async function readImport(text, fileName) {
+    imp.file = fileName || ""; imp.error = "";
+    const isOfx = /<OFX>|<STMTTRN>/i.test(text);
+    if (isOfx) {
+      const t = parseOFX(text);
+      if (!t.length) { imp.error = "Não encontrei transações neste OFX."; imp.rows = []; return renderImport(); }
+      imp.card = false;   // no OFX o sinal já vem certo (débito negativo), inclusive na fatura do cartão
+      imp.parsed = t; buildRows(t, true);
+    } else {
+      const r = parseCSV(text);
+      if (r.error) { imp.error = r.error; imp.rows = []; return renderImport(); }
+      imp.card = r.card; imp.parsed = r.rows; buildRows(r.rows, false);
+    }
+    renderImport();
+  }
+  function openImport() {
+    Object.assign(imp, { rows: [], parsed: null, card: false, learn: true, file: "", error: "" });
+    renderImport();
+    $("importDlg").showModal();
+  }
+  function closeImport() { if ($("importDlg").open) $("importDlg").close(); }
+  function ctxSelect(kind, value, onchange, label) {
+    const s = el("select", { "aria-label": label, onchange: (ev) => onchange(ev.target.value) },
+      el("option", { value: "" }, "Escolha a tabela…"), ...ctxs(kind).map(c => el("option", { value: c.id }, c.name)));
+    s.value = value || "";
+    return s;
+  }
+  function renderImport() {
+    const dlg = $("importDlg");
+    const file = el("input", { type: "file", accept: ".ofx,.qfx,.csv,.txt,text/csv", "aria-label": "Arquivo do extrato", onchange: async (ev) => {
+      const f = ev.target.files[0]; if (!f) return;
+      const buf = await f.arrayBuffer();
+      let text = new TextDecoder("utf-8").decode(buf);
+      if (text.includes("�")) text = new TextDecoder("windows-1252").decode(buf);   // OFX de banco brasileiro costuma vir em ANSI
+      readImport(text, f.name);
+    } });
+    const paste = el("textarea", { rows: "3", placeholder: "…ou cole aqui o conteúdo do CSV/OFX", "aria-label": "Conteúdo do extrato" });
+    const pasteBtn = el("button", { class: "btn", type: "button", onclick: () => { if (paste.value.trim()) readImport(paste.value, "texto colado"); } }, "Ler texto colado");
+    const head = el("div", { class: "imp-head" }, el("h2", { id: "impTitle" }, "Importar extrato"), el("button", { class: "iconbtn", type: "button", "aria-label": "Fechar", onclick: closeImport }, "×"));
+    const src = el("div", { class: "imp-src" },
+      el("p", { class: "small" }, "Exporte o extrato da conta ou a fatura do cartão no app do banco, em OFX (recomendado) ou CSV, e escolha o arquivo. Nada é enviado para fora do seu computador."),
+      el("div", { class: "imp-pick" }, file, el("span", { class: "small" }, imp.file ? `Lido: ${imp.file}` : "")),
+      el("details", {}, el("summary", {}, "Colar o conteúdo em vez de escolher o arquivo"), paste, pasteBtn));
+    const parts = [head, src];
+    if (imp.error) parts.push(el("p", { class: "imp-err", role: "alert" }, imp.error));
+    if (imp.rows.length) {
+      const chosen = imp.rows.filter(r => r.on && r.ctx && !r.missing);
+      const months = [...new Set(chosen.map(r => r.month))];
+      const counts = { dup: imp.rows.filter(r => r.dup).length, missing: imp.rows.filter(r => r.missing).length, pending: imp.rows.filter(r => r.on && !r.ctx).length };
+      const opts = el("div", { class: "imp-opts" },
+        imp.isOfx ? null : el("button", { class: "toggle", type: "button", "aria-pressed": String(imp.card), onclick: () => { imp.card = !imp.card; buildRows(imp.parsed, false); renderImport(); } }, el("span", { class: "box" }, "✓"), "Fatura de cartão (valor positivo é gasto)"),
+        el("button", { class: "toggle", type: "button", "aria-pressed": String(imp.learn), onclick: () => { imp.learn = !imp.learn; renderImport(); } }, el("span", { class: "box" }, "✓"), "Criar regras com as tabelas que eu escolher"));
+      const allOn = imp.rows.filter(r => !r.missing).every(r => r.on);
+      const table = el("table", { class: "imp-table" },
+        el("thead", {}, el("tr", {},
+          el("th", { scope: "col" }, el("input", { type: "checkbox", checked: allOn || null, "aria-label": "Marcar todas", onchange: (ev) => { imp.rows.forEach(r => { if (!r.missing) r.on = ev.target.checked; }); renderImport(); } })),
+          el("th", { scope: "col" }, "Data"), el("th", { scope: "col" }, "Nome"), el("th", { scope: "col" }, "Tabela"), el("th", { scope: "col", class: "num" }, "Valor"))),
+        el("tbody", {}, ...imp.rows.map(r => {
+          const note = r.missing ? `${monthLabel(r.month)} não existe: crie o mês antes` : r.dup ? "já lançado" : r.billPay ? "pagamento da fatura" : r.how === "regra" ? "pela regra" : r.how === "histórico" ? "como antes" : "";
+          const nm = el("input", { type: "text", value: r.name, maxlength: "120", "aria-label": `Nome de ${r.desc}`, onchange: (ev) => { r.name = ev.target.value.trim() || r.name; r.touched = true; } });
+          return el("tr", { class: (r.on ? "" : "off ") + (r.missing ? "missing" : "") },
+            el("td", {}, el("input", { type: "checkbox", checked: r.on || null, disabled: r.missing || null, "aria-label": `Importar ${r.desc}`, onchange: (ev) => { r.on = ev.target.checked; renderImport(); } })),
+            el("td", { class: "num" }, `${pad2(r.day)}/${r.month.slice(5)}`),
+            el("td", {}, nm, el("small", { title: r.desc }, r.desc !== r.name ? r.desc : "", note ? el("em", {}, note) : null)),
+            el("td", {}, ctxSelect(r.kind, r.ctx, (v) => { r.ctx = v; r.touched = true; r.how = ""; if (v && !r.missing) r.on = true; renderImport(); }, `Tabela de ${r.desc}`)),
+            el("td", { class: "num " + r.kind }, (r.kind === "income" ? "+" : "−") + fmtPlain(r.value)));
+        })));
+      const sumIn = sumMoney(chosen.filter(r => r.kind === "income").map(r => r.value)), sumOut = sumMoney(chosen.filter(r => r.kind === "expense").map(r => r.value));
+      const foot = el("div", { class: "imp-foot" },
+        el("p", { class: "small" }, `${countLabel(chosen.length, "transação", "transações")} para importar` + (months.length ? ` em ${months.map(shortMonthLabel).join(", ")}` : "") +
+          ` · +${fmt(sumIn)} · −${fmt(sumOut)}` + (counts.dup ? ` · ${countLabel(counts.dup, "já lançada", "já lançadas")}` : "") + (counts.pending ? ` · ${counts.pending} sem tabela` : "") + (counts.missing ? ` · ${counts.missing} em mês não criado` : "")),
+        el("div", { class: "imp-actions" }, el("button", { class: "btn", type: "button", onclick: closeImport }, "Cancelar"),
+          el("button", { class: "btn solid", type: "button", disabled: !chosen.length || null, onclick: doImport }, chosen.length ? `Importar ${countLabel(chosen.length, "item", "itens")}` : "Importar")));
+      parts.push(opts, el("div", { class: "imp-scroll" }, table), foot);
+    }
+    parts.push(rulesPanel());
+    dlg.replaceChildren(...parts);
+  }
+  function rulesPanel() {
+    const rules = rulesOf();
+    const match = el("input", { type: "text", maxlength: "60", placeholder: "contém… (ex.: uber)", "aria-label": "Texto que a descrição contém" });
+    const all = [...ctxs("expense").map(c => ["expense", c]), ...ctxs("income").map(c => ["income", c])];
+    const sel = el("select", { "aria-label": "Tabela da regra" }, el("option", { value: "" }, "Tabela…"), ...all.map(([k, c]) => el("option", { value: c.id }, `${c.name} (${k === "income" ? "entrada" : "saída"})`)));
+    const rename = el("input", { type: "text", maxlength: "120", placeholder: "renomear para (opcional)", "aria-label": "Novo nome" });
+    const add = el("button", { class: "btn", type: "button", onclick: () => {
+      const m = match.value.trim(); if (!m || !sel.value) { match.focus(); return; }
+      const r = { id: uid(), match: m, ctx: sel.value }; if (rename.value.trim()) r.name = rename.value.trim();
+      state.settings.rules = [...(state.settings.rules || []), r];
+      store.saveSettings(); hist.label(`Regra "${m}" criada`);
+      reSuggest(); renderImport();
+    } }, "Adicionar regra");
+    const det = el("details", { class: "imp-rules" }, el("summary", {}, `Regras automáticas (${rules.length})`),
+      rules.length ? el("ul", {}, ...rules.map(r => el("li", {}, el("span", {}, "contém ", el("b", {}, `“${r.match}”`), " → ", findCtx(r.ctx)[1].name, r.name ? ` · vira “${r.name}”` : ""),
+        el("button", { class: "iconbtn", type: "button", "aria-label": `Apagar a regra ${r.match}`, onclick: () => {
+          state.settings.rules = (state.settings.rules || []).filter(x => x.id !== r.id); store.saveSettings(); hist.label(`Regra "${r.match}" apagada`); reSuggest(); renderImport();
+        } }, "×")))) : el("p", { class: "small" }, "Nenhuma regra ainda. Elas são criadas sozinhas quando você escolhe a tabela de uma transação na importação, ou aqui."),
+      el("div", { class: "imp-addrule" }, match, sel, rename, add));
+    if (state.rulesOpen) det.open = true;
+    det.addEventListener("toggle", () => { state.rulesOpen = det.open; });
+    return det;
+  }
+  function doImport() {
+    const chosen = imp.rows.filter(r => r.on && r.ctx && !r.missing && state.months[r.month] && findCtx(r.ctx)[1]);
+    if (!chosen.length) return;
+    const now = Date.now(), touched = new Set();
+    chosen.forEach((r, i) => {
+      const e = { id: uid(), kind: r.kind, ctx: r.ctx, name: (r.name || r.desc).slice(0, 120), value: r.value, day: r.day, ext: r.ext, at: now + i };
+      if (r.kind === "expense") e.paid = true;      // já aconteceu: não vira conta "a vencer"
+      state.months[r.month].entries.push(e);
+      touched.add(r.month);
+    });
+    touched.forEach(m => store.saveMonth(m));
+    // regras novas a partir das escolhas feitas à mão
+    let learned = 0;
+    if (imp.learn) {
+      const rules = [...(state.settings.rules || [])];
+      for (const r of chosen) {
+        if (r.how === "regra" || !r.touched) continue;
+        const key = learnKey(r.desc);
+        if (!key || rules.some(x => plainName(x.match) === key)) continue;
+        const rule = { id: uid(), match: key, ctx: r.ctx };
+        if (r.name && plainName(r.name) !== plainName(prettyName(r.desc))) rule.name = r.name;
+        rules.push(rule); learned++;
+      }
+      if (learned) { state.settings.rules = rules; store.saveSettings(); }
+    }
+    closeImport();
+    const first = [...touched].sort().pop();
+    if (first && first !== state.selected) goto(first); else render();
+    showToast(`${countLabel(chosen.length, "item importado", "itens importados")}` + (learned ? ` e ${countLabel(learned, "regra nova", "regras novas")}` : ""), 10000);
+  }
+  $("importBtn").addEventListener("click", openImport);
+  $("importDlg").addEventListener("click", (e) => { if (e.target === $("importDlg")) closeImport(); });
+
   // ---------- Ações ----------
+  function togglePaid(id, mid = state.selected) {
+    const t = state.months[mid] && state.months[mid].entries.find(x => x.id === id);
+    if (!t) return;
+    if (t.paid) delete t.paid; else t.paid = true;
+    store.saveMonth(mid);
+    hist.label(`"${t.name}" ${t.paid ? "marcada como paga" : "desmarcada como paga"}`);
+    render();
+  }
   function removeEntry(id) {
     const mid = state.selected, list = state.months[mid].entries;
     const idx = list.findIndex(e => e.id === id);
@@ -1224,7 +2345,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function genericLabel(keys) {
     if (keys.length > 1) return "Alteração em vários lugares";
     const k = keys[0];
-    return k === "settings" ? "Alteração nas tabelas" : k === "goals" ? "Alteração nas metas" : `Alteração em ${monthLabel(k.slice(2))}`;
+    return k === "settings" ? "Alteração nas tabelas" : k === "goals" ? "Alteração nas metas" : k === "plans" ? "Alteração nas compras parceladas" : `Alteração em ${monthLabel(k.slice(2))}`;
   }
   function updateHistBar() {
     const u = hist.undo[hist.undo.length - 1], r = hist.redo[hist.redo.length - 1];
@@ -1352,7 +2473,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const out = new Map();
     for (const m of before) {
       for (const e of state.months[m].entries) {
-        if (!findCtx(e.ctx)[1]) continue;
+        if (!findCtx(e.ctx)[1] || e.inst) continue;   // parcelas vêm das compras parceladas
         if (!out.has(e.ctx)) out.set(e.ctx, { month: m, items: [] });
         const src = out.get(e.ctx);
         if (src.month === m) src.items.push(e);
@@ -1380,7 +2501,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function openNewMonth() {
     const ids = monthIds();
     $("newMonthInput").value = ids.length ? shiftMonth(ids[ids.length - 1], 1) : currentMonthId();
-    state.copySel = new Set([...ctxs("income"), ...ctxs("expense")].filter(isRepeat).map(c => c.id));
+    state.copySel = defaultCopySel();
     $("newMonthSheet").hidden = false;
     renderCopy();
     $("newMonthInput").focus();
@@ -1388,15 +2509,32 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function createMonth() {
     const id = $("newMonthInput").value;
     if (!/^\d{4}-\d{2}$/.test(id)) { $("nmMsg").textContent = "Escolha um mês."; return; }
-    if (!state.months[id]) {
-      const srcs = copySources(id), now = Date.now();
-      const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => ({ ...e, id: uid(), at: now + i })));
-      state.months[id] = { entries: copied };
-      store.saveMonth(id);
-      hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : ""));
-    }
+    buildMonth(id, state.copySel);
     $("newMonthSheet").hidden = true;
     goto(id);
+  }
+  // Cria o mês copiando as tabelas escolhidas (sel) e lançando as parcelas das compras parceladas
+  const defaultCopySel = () => new Set([...ctxs("income"), ...ctxs("expense")].filter(isRepeat).map(c => c.id));
+  function buildMonth(id, sel) {
+    if (!state.months[id]) {
+      const srcs = copySources(id), now = Date.now();
+      const copied = [...srcs].filter(([cid]) => sel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
+        const o = { ...e, id: uid(), at: now + i };
+        delete o.paid;                     // conta paga no mês passado volta a ficar em aberto
+        delete o.ext;                      // a cópia não é a mesma transação do extrato
+        // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
+        const c = findCtx(e.ctx)[1], p = partOf(c, e);
+        if (p) o.day = payDay(id, p, c.pay.sat);
+        else if (o.day) { o.day = Math.min(o.day, daysIn(id)); delete o.part; }
+        return o;
+      }));
+      const insts = state.plans.filter(p => planActive(p, id) && findCtx(p.ctx)[1]).map((p, i) => instEntry(p, id, now + copied.length + i));
+      state.months[id] = { entries: [...copied, ...insts] };
+      store.saveMonth(id);
+      hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : "") + (insts.length ? ` e ${countLabel(insts.length, "parcela", "parcelas")}` : ""));
+      return copied.length + insts.length;
+    }
+    return 0;
   }
   $("openNewMonth").addEventListener("click", openNewMonth);
   $("startMonth").addEventListener("click", openNewMonth);

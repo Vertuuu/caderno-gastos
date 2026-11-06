@@ -142,6 +142,68 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
 
+### Datas de recebimento
+
+- Nas tabelas de **entradas**, o menu ⋯ tem **Dividir em datas de recebimento**: cada valor lançado é dividido nas datas configuradas. Exemplo: salário de R$ 5.000 com 60% no **5º dia útil** e 40% **todo dia 20** vira dois registros, de R$ 3.000 e R$ 2.000, cada um com o seu dia.
+- Cada data pode ser **"dia útil"** (o Nº dia útil do mês, contando de segunda a sexta, pulando feriados nacionais, com opção de contar o sábado) ou **"dia fixo"** (todo mês no mesmo dia, que **antecipa**, **adia** ou **mantém** quando cai em fim de semana ou feriado). Dá para ter até 6 datas, e as porcentagens precisam somar 100%.
+- No mês seguinte, os itens copiados têm o dia **recalculado**, porque o 5º dia útil muda de mês para mês.
+- O resumo do mês mostra quanto **já caiu** e qual é o **próximo recebimento**. Cada registro mostra a data e fica verde depois que ela passa.
+- Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para pôr ou tirar a data de qualquer entrada clicando nela para editar.
+- O botão **Dividir os itens deste mês** aplica a divisão ao que já foi lançado antes de ligar a opção.
+
+### Vencimento das contas
+
+- Em qualquer **saída**, clique no item e preencha o campo **venc.** com o dia em que a conta vence todo mês (ex.: Aluguel dia 5). Deixe vazio para tirar o vencimento.
+- A conta ganha uma **bolinha para marcar como paga** e um selo com a situação: **venceu**, **vence hoje**, **vence amanhã / em N dias** (até 3 dias antes), **vence dd/mm** ou **paga**. Os itens aparecem na ordem de vencimento.
+- Se o vencimento cai em **fim de semana ou feriado**, vale o próximo dia útil, como num boleto (passe o mouse no selo para ver).
+- No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
+- Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
+
+### Compras parceladas
+
+- Em qualquer tabela de **saídas**, clique em **Parcelar no cartão** abaixo do campo de lançamento. Digite o nome e o **valor total**, o número de parcelas e se a 1ª parcela cai **neste mês** ou no **próximo** (compra feita depois do fechamento da fatura). O dia de vencimento da fatura é opcional. Uma prévia mostra, por exemplo, "3x de R$ 333,33 (1ª de R$ 333,34) · de Nov 2026 a Jan 2027".
+- Cada mês ganha sozinho a parcela dele, como "Geladeira (2/3)", inclusive os meses criados depois. Os centavos que sobram da divisão ficam na 1ª parcela, como na fatura.
+- Parcelas não são copiadas junto com a tabela ao criar o mês, então nada sai duplicado.
+- A seção **Compras parceladas** lista o que ainda está sendo pago: a parcela do mês, quanto falta e quando termina.
+  - **Antecipar o resto** junta as parcelas que faltam num pagamento só, no mês aberto, e tira as parcelas dos meses seguintes.
+  - **Excluir compra** apaga a compra e todas as parcelas dela.
+- As parcelas com dia de vencimento entram nos lembretes de contas e na previsão do saldo.
+
+### Importar extrato
+
+- **Importar extrato** fica no topo de Lançamentos, ao lado de Limpar registros.
+- **De onde vem o arquivo:** exporte o extrato da conta ou a fatura do cartão no app do banco, em **OFX** (recomendado) ou **CSV**. Escolha o arquivo ou cole o conteúdo. Nada sai do seu computador.
+  - **CSV:** precisa ter cabeçalho com data e valor. Funciona com `;` ou `,`, valores no formato `1.234,56` ou `1234.56` e datas `dd/mm/aaaa` ou `aaaa-mm-dd`.
+  - **Fatura de cartão em CSV:** valor positivo é gasto. O modelo do Nubank (`date,title,amount`) é reconhecido sozinho.
+- **Na prévia,** cada transação vai para o mês da data dela, e a **tabela** vem sozinha, nesta ordem:
+  1. pelas **regras** ("contém uber → Uber");
+  2. pelo **histórico** (um item com o mesmo nome já lançado antes);
+  3. ou você escolhe na hora.
+- **Linhas que já vêm desmarcadas:** transações **já lançadas**, que nunca entram duas vezes; transações sem tabela; e o pagamento da própria fatura. Meses que ainda não existem aparecem bloqueados.
+- **Regras automáticas:** com a opção **Criar regras com as tabelas que eu escolher**, cada escolha feita à mão vira uma regra para as próximas importações. Em **Regras automáticas** dá para criar regras (com nome novo opcional, ex.: "ifood" → Mercado, como "iFood") ou apagar as que existem.
+- **Gastos importados** já entram como **pagos** e com o dia da compra, então aparecem na previsão do saldo sem virar "conta a vencer".
+
+### Desde a última vez
+
+- Ao abrir o app, um quadro no topo resume o que aconteceu no mês desde a sua **última visita** naquele aparelho:
+  - as **entradas que caíram**;
+  - as **contas que venceram** e ainda não foram marcadas como pagas, com o botão **✓ Já paguei** para marcar todas de uma vez.
+- Se o **mês atual ainda não existe**, o quadro oferece **Criar** o mês na hora, já com as tabelas que repetem (com as datas recalculadas) e as parcelas das compras parceladas.
+- **Entendi** fecha o quadro. Sem clicar, ele volta na próxima vez que você abrir o app, para nada passar despercebido.
+
+### Previsão do saldo
+
+- Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".
+- Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**.
+- Se o saldo ficar **negativo**, um aviso mostra em quais dias e qual é o pior valor. O trecho negativo do gráfico fica em vermelho.
+- **Gráfico:** passe o mouse (ou toque) para ver o saldo de cada dia e o que entra e sai nele. Com o teclado, use as setas. **Ver dia a dia** abre a mesma informação em tabela.
+- **Saldo no início do mês:** clique em **Alterar** para informar quanto já havia na conta (aceita valor negativo, como `-150,50`). Ou use **Usar a sobra do mês anterior** para começar com o que sobrou no mês passado.
+- **Regras usadas:**
+  - Entradas sem data contam no dia 1.
+  - Gastos sem data (Comida, Uber…) são espalhados igualmente pelo mês.
+  - No mês atual, conta vencida e não paga é contada como saindo hoje.
+  - Conta paga antes do vencimento também é contada como saindo hoje.
+
 ### Meses
 
 - **Novo mês** com cópia automática dos itens das tabelas marcadas para repetir (por padrão, Gastos Fixos e Salário). Na hora de criar, dá para escolher quais copiar.
