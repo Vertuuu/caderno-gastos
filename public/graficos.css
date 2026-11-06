@@ -36,7 +36,7 @@
 .chead h3 { margin: 0; font-family: var(--f-display); font-size: 19px; }
 .chead p { margin: 2px 0 0; font-size: 13px; color: var(--muted); max-width: 52ch; }
 .cempty { margin: 0; padding: 24px; text-align: center; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 12px; }
-.scrollx { overflow-x: auto; max-width: 100%; }
+.scrollx { overflow-x: auto; max-width: 100%; position: relative; }   /* relative: textos .sr absolutos ficam dentro da rolagem e não alargam a página */
 
 /* rosca */
 .donutwrap { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 20px; align-items: center; }

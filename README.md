@@ -166,6 +166,6 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 - **Desfazer e Refazer** sempre à mão, no canto inferior direito (ou **Ctrl+Z** e **Ctrl+Y**): voltam qualquer ação, como lançar, editar, remover, renomear, mover, criar ou excluir tabela, mês ou meta. Cada aparelho guarda as **últimas 20 ações** enquanto a aba estiver aberta, e desfazer não apaga o que foi lançado depois em outro aparelho.
 - **Tema claro e escuro** (ou igual ao sistema), no site e no painel.
-- Funciona no celular, com layout próprio para tela pequena.
+- Funciona no celular, com layout próprio para tela pequena: a navegação fica numa **barra fixa embaixo**, com o mês no centro, menus de **páginas** e **tema** que abrem para cima e **Desfazer/Refazer**; **Novo mês** fica no topo de Lançamentos, junto de Limpar registros e Excluir mês.
 - **Sincronização entre aparelhos** da mesma rede: o que é lançado no celular aparece no computador em poucos segundos.
 - Salvamento automático, com uma cópia de segurança por dia.
