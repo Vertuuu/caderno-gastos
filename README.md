@@ -158,8 +158,9 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 ### Metas
 
 - Meta com nome, valor e cor, calculada por **gasto mensal** ou por **meses para atingir**: você preenche um e o outro é calculado, mostrando o que sobra no último mês.
-- Barra de progresso em % e previsão de quando a meta será atingida.
-- **+ parcela** lança o valor do mês numa tabela de saídas **Metas**, criada automaticamente. Registros com o nome da meta nessa tabela contam para o progresso.
+- Barra de progresso em %, quanto **falta juntar** e previsão de quando a meta será atingida.
+- O botão de parcela mostra o valor (**+ R$ 300,00**) e lança esse valor numa tabela de saídas **Metas**, criada automaticamente. Registros com o nome da meta nessa tabela contam para o progresso.
+- No celular, cada meta vira um **card** (sem rolar para o lado), com um resumo curto (quanto falta, quantos meses faltam e quanto vai sobrar); a nova meta é preenchida num card-formulário.
 - Caixa **Ativa** para tirar uma meta do resumo do topo sem apagá-la.
 
 ### Geral

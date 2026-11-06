@@ -119,6 +119,13 @@
     };
   }
 
+  // Resumo curto para o card do celular: "Faltam R$ 2.700,00 · faltam 9 meses · vão sobrar R$ 200,00".
+  // A conta completa (d.formula) continua no title das células calculadas, no desktop.
+  function shortSummary(d) {
+    const n = (k) => `${k} ${k === 1 ? "mês" : "meses"}`;
+    return [`Faltam ${api.fmt(d.remaining)}`, `faltam ${n(d.months)}`, d.surplus > 0 ? `vão sobrar ${api.fmt(d.surplus)}` : null].filter(Boolean).join(" · ");
+  }
+
   function save() { api.store.saveGoals(); render(); }
 
   // ---------- Formulário de nova meta ----------
@@ -202,9 +209,10 @@
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finish(true); } if (e.key === "Escape") finish(false); });
       inp.addEventListener("blur", () => finish(true));
       requestAnimationFrame(() => { inp.focus(); inp.select(); });
-      return el("td", { class: opts.cls }, inp);
+      return el("td", { class: opts.cls, "data-label": opts.label }, inp);
     }
-    return el("td", { class: opts.cls },
+    // data-label: no celular a linha vira card e o CSS mostra o rótulo ao lado do valor
+    return el("td", { class: opts.cls, "data-label": opts.label },
       el("button", { class: `gcell ${opts.calc ? "calc" : ""}`, title: opts.title || "Clique para editar", onclick: () => { edit = { id: g.id, field }; colorOpen = null; notice = null; render(); } },
         display, opts.calc ? el("span", { class: "calctag" }, "calculado") : null));
   }
@@ -237,10 +245,14 @@
       el("td", { class: "gprog" }, el("div", { class: "gp" },
         el("div", { class: "pbar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(Math.round(d.pct)), "aria-label": `Progresso de ${g.name}`, title: `Faltam ${api.fmt(d.remaining)}` },
           el("i", { style: `width:${d.pct}%` })),
-        el("span", { class: "pnum num" }, `${d.pct.toLocaleString("pt-BR", { maximumFractionDigits: d.pct < 10 && d.pct > 0 ? 1 : 0 })}%`))),
-      el("td", { class: "geta num", title: d.left ? `Faltam ${d.left} ${d.left === 1 ? "mês" : "meses"} no ritmo atual` : "" }, d.eta),
+        el("span", { class: "pnum num" }, `${d.pct.toLocaleString("pt-BR", { maximumFractionDigits: d.pct < 10 && d.pct > 0 ? 1 : 0 })}%`)),
+        // visível sem passar o mouse (no toque não existe title)
+        el("small", { class: "gleft" }, d.done ? "Meta atingida" : `Faltam ${api.fmt(d.remaining)}`),
+        d.done ? null : el("small", { class: "gsummary" }, shortSummary(d))),
+      el("td", { class: "geta num", "data-label": "Previsão", title: d.left ? `Faltam ${d.left} ${d.left === 1 ? "mês" : "meses"} no ritmo atual` : "" }, d.eta),
       el("td", { class: "gact" },
-        el("button", { class: "gbtn", title: `Lança ${api.fmt(round2(d.monthly))} como "${g.name}" na tabela Metas do mês atual`, disabled: d.done, onclick: () => addParcela(g) }, "+ parcela"),
+        el("button", { class: "gbtn", title: `Lança ${api.fmt(round2(d.monthly))} como "${g.name}" na tabela Metas do mês atual`, "aria-label": d.done ? `Meta ${g.name} atingida` : `Lançar parcela de ${api.fmt(round2(d.monthly))} em ${g.name}`, disabled: d.done, onclick: () => addParcela(g) },
+          d.done ? "+ parcela" : [el("span", { class: "gbtn-short" }, `+ ${api.fmt(round2(d.monthly))}`), el("span", { class: "gbtn-long" }, `+ parcela de ${api.fmt(round2(d.monthly))}`)]),
         el("button", { class: "iconbtn gdel", title: "Excluir meta", "aria-label": `Excluir meta ${g.name}`, onclick: () => removeGoal(g) }, "×")));
   }
 
@@ -308,8 +320,9 @@
     inMonths.classList.toggle("auto", lastTyped === "monthly");
     [inName, inValue, inMonthly, inMonths].forEach(i => i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addGoal(); } }));
     const addRow = el("tr", { class: "gadd" },
-      el("td", {}), el("td", {}, el("span", { class: "gdot ghost" })),
-      el("td", {}, inName), el("td", {}, inValue), el("td", {}, inMonthly), el("td", {}, inMonths),
+      el("td", {}, el("span", { class: "gadd-title" }, "Nova meta")), el("td", {}, el("span", { class: "gdot ghost" })),
+      el("td", { "data-label": "Nome" }, inName), el("td", { "data-label": "Valor (R$)" }, inValue),
+      el("td", { "data-label": "Gasto mensal (R$)" }, inMonthly), el("td", { "data-label": "Meses p/ atingir" }, inMonths),
       el("td", { colspan: "3" }, prev),
       el("td", { class: "gact" }, el("button", { class: "btn solid", onclick: addGoal }, "Adicionar")));
 
