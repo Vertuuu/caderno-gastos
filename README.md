@@ -169,6 +169,14 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
   - **Excluir compra** apaga a compra e todas as parcelas dela.
 - As parcelas com dia de vencimento entram nos lembretes de contas e na previsão do saldo.
 
+### Desde a última vez
+
+- Ao abrir o app, um quadro no topo resume o que aconteceu no mês desde a sua **última visita** naquele aparelho:
+  - as **entradas que caíram**;
+  - as **contas que venceram** e ainda não foram marcadas como pagas, com o botão **✓ Já paguei** para marcar todas de uma vez.
+- Se o **mês atual ainda não existe**, o quadro oferece **Criar** o mês na hora, já com as tabelas que repetem (com as datas recalculadas) e as parcelas das compras parceladas.
+- **Entendi** fecha o quadro. Sem clicar, ele volta na próxima vez que você abrir o app, para nada passar despercebido.
+
 ### Previsão do saldo
 
 - Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".

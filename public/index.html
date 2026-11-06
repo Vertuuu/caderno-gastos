@@ -329,6 +329,17 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .inst { grid-template-columns: minmax(0, 1fr); }
   .inst-actions { grid-auto-flow: column; justify-content: start; }
 }
+.since { border: 1px solid color-mix(in srgb, var(--focus) 40%, var(--line)); background: color-mix(in srgb, var(--focus) 6%, var(--surface)); border-radius: 14px; padding: 14px 16px; display: grid; gap: 12px; }
+.since-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.since-head h2 { margin: 0; font-size: 16px; }
+.since-head .btn { padding: 4px 12px; font-size: 13px; }
+.since-block { display: grid; gap: 8px; justify-items: start; }
+.since-block p { margin: 0; font-size: 14px; }
+.since-block ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: 100%; }
+.since-block li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 14px; }
+.since-block li .daychip { margin: 0; }
+.since-block li b { font-family: var(--f-num); font-weight: 500; }
+.since-block .btn { padding: 5px 12px; font-size: 13px; }
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -534,6 +545,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <button class="btn ghost" id="clearMonth" title="Apaga todos os itens deste mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Limpar registros</button>
       <button class="btn ghost danger" id="deleteMonth" title="Remove o mês e seus registros"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 14l4 4M14 14l-4 4"/></svg>Excluir mês</button>
     </div>
+
+    <section class="since" id="since" hidden aria-labelledby="sinceTitle"></section>
 
     <section class="alerts" id="alerts" hidden aria-label="Contas a vencer" aria-live="polite"></section>
 
@@ -1115,13 +1128,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("goals").hidden = view !== "goals";
     if (view !== "lanc") {
       $("newMonthSheet").hidden = true;
-      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast", "secInst"].forEach(id => $(id).hidden = true);
+      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast", "secInst", "since"].forEach(id => $(id).hidden = true);
       document.title = `${view === "charts" ? "Gráficos" : "Metas"} · Caderno de Gastos`;
       if (store.ready && view === "charts" && window.renderCharts) window.renderCharts(chartsApi);
       if (store.ready && view === "goals" && window.renderGoals) window.renderGoals(chartsApi);
       return;
     }
     const has = !!state.selected;
+    renderSince();
     $("welcome").hidden = has || !store.ready;
     ["summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = !has);
     if (has) $("clearMonth").disabled = entries().length === 0;
@@ -1183,6 +1197,77 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const late = open.filter(e => dueState(mid, e) === "late").length;
     return `${fmt(sumMoney(open.map(e => e.value)))} a pagar` + (late ? ` · ${countLabel(late, "vencida", "vencidas")}` : "");
   }
+
+  // ---------- Desde a última vez ----------
+  // Cada aparelho lembra o dia da última visita (localStorage). Ao abrir de novo, um quadro resume o que
+  // aconteceu desde então no mês atual: entradas que caíram e contas que venceram (com "marcar como pagas").
+  // Se o mês atual ainda não existe, oferece criá-lo com as tabelas que repetem e as parcelas.
+  const VISIT_KEY = "caderno-ultima-visita";
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+  const readVisit = () => { try { return localStorage.getItem(VISIT_KEY); } catch (e) { return null; } };
+  const writeVisit = (v) => { try { localStorage.setItem(VISIT_KEY, v); } catch (e) {} };
+  const sinceState = { last: undefined, hidden: false };
+  function sinceInfo() {
+    const cur = currentMonthId(), today = new Date().getDate();
+    const missing = !state.months[cur] && monthIds().length > 0 && monthIds()[monthIds().length - 1] < cur;
+    const last = sinceState.last;
+    let fell = [], due = [];
+    if (last && /^\d{4}-\d{2}-\d{2}$/.test(last) && last < todayStr() && state.months[cur]) {
+      const from = last.slice(0, 7) === cur ? Number(last.slice(8)) + 1 : 1;
+      const es = state.months[cur].entries;
+      fell = es.filter(e => e.kind === "income" && e.day && e.day >= from && e.day <= today);
+      due = es.filter(e => e.kind === "expense" && e.day && !e.paid && (d => d >= from && d <= today)(dueDay(cur, e.day)));
+    }
+    return { cur, missing, last, fell, due };
+  }
+  function renderSince() {
+    const box = $("since");
+    if (!store.ready) { box.hidden = true; return; }
+    if (sinceState.last === undefined) {
+      sinceState.last = readVisit();
+      if (!sinceState.last) writeVisit(todayStr());     // primeira visita neste aparelho: nada a resumir
+    }
+    const s = sinceInfo();
+    const show = !sinceState.hidden && (s.missing || ((s.fell.length || s.due.length) && state.selected === s.cur));
+    box.hidden = !show;
+    if (!show) return box.replaceChildren();
+    const lastLabel = s.last ? `${s.last.slice(8)}/${s.last.slice(5, 7)}` : "";
+    const parts = [];
+    if (s.missing) {
+      const sel = defaultCopySel();
+      const names = [...ctxs("income"), ...ctxs("expense")].filter(c => sel.has(c.id)).map(c => c.name);
+      const nInst = state.plans.filter(p => planActive(p, s.cur) && findCtx(p.ctx)[1]).length;
+      parts.push(el("div", { class: "since-block" },
+        el("p", {}, el("b", {}, `${monthLabel(s.cur)} ainda não foi criado.`), " ",
+          names.length || nInst ? `Dá para criar agora já com ${[names.length ? names.join(", ") : "", nInst ? countLabel(nInst, "parcela", "parcelas") : ""].filter(Boolean).join(" e ")}.` : ""),
+        el("button", { class: "btn solid", type: "button", onclick: () => { const n = buildMonth(s.cur, sel); goto(s.cur); showToast(`${monthLabel(s.cur)} criado` + (n ? ` com ${countLabel(n, "item", "itens")}` : ""), 8000); } }, `Criar ${MONTHS[Number(s.cur.slice(5)) - 1]}`)));
+    }
+    if (s.fell.length) parts.push(el("div", { class: "since-block" },
+      el("p", {}, el("b", {}, s.fell.length === 1 ? "Entrada que caiu" : "Entradas que caíram"), ` · ${fmt(sumMoney(s.fell.map(e => e.value)))}`),
+      el("ul", {}, ...s.fell.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip paid" }, dayLabel(s.cur, e.day)), e.name, el("b", { class: "num" }, fmt(e.value)))))));
+    if (s.due.length) parts.push(el("div", { class: "since-block" },
+      el("p", {}, el("b", {}, s.due.length === 1 ? "Conta que venceu" : "Contas que venceram"), ` · ${fmt(sumMoney(s.due.map(e => e.value)))}`),
+      el("ul", {}, ...s.due.sort((a, b) => a.day - b.day).map(e => el("li", {}, el("span", { class: "daychip due-late" }, dayLabel(s.cur, dueDay(s.cur, e.day))), e.name, el("b", { class: "num" }, fmt(e.value))))),
+      el("button", { class: "btn", type: "button", onclick: () => {
+        const ids = new Set(s.due.map(e => e.id));
+        state.months[s.cur].entries.forEach(e => { if (ids.has(e.id)) e.paid = true; });
+        store.saveMonth(s.cur);
+        hist.label(`${countLabel(ids.size, "conta marcada", "contas marcadas")} como paga${ids.size === 1 ? "" : "s"}`);
+        render();
+      } }, s.due.length === 1 ? "✓ Já paguei" : `✓ Já paguei as ${s.due.length}`)));
+    box.replaceChildren(
+      el("div", { class: "since-head" },
+        el("h2", { id: "sinceTitle" }, s.last && s.last < todayStr() ? `Desde a sua última visita (${lastLabel})` : "Para começar o mês"),
+        el("button", { class: "btn ghost", type: "button", onclick: () => { sinceState.hidden = true; writeVisit(todayStr()); render(); } }, "Entendi")),
+      ...parts);
+  }
+  // ao sair da página sem nada pendente para mostrar, hoje vira a "última visita"
+  // (com algo pendente, o quadro continua aparecendo até o "Entendi")
+  window.addEventListener("pagehide", () => {
+    if (!store.ready || sinceState.last === undefined) return;
+    const s = sinceInfo();
+    if (sinceState.hidden || (!s.fell.length && !s.due.length)) writeVisit(todayStr());
+  });
 
   // Faixa de lembrete no topo: contas do mês atual vencidas ou vencendo nos próximos dias
   function renderAlerts() {
@@ -2123,7 +2208,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function openNewMonth() {
     const ids = monthIds();
     $("newMonthInput").value = ids.length ? shiftMonth(ids[ids.length - 1], 1) : currentMonthId();
-    state.copySel = new Set([...ctxs("income"), ...ctxs("expense")].filter(isRepeat).map(c => c.id));
+    state.copySel = defaultCopySel();
     $("newMonthSheet").hidden = false;
     renderCopy();
     $("newMonthInput").focus();
@@ -2131,9 +2216,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function createMonth() {
     const id = $("newMonthInput").value;
     if (!/^\d{4}-\d{2}$/.test(id)) { $("nmMsg").textContent = "Escolha um mês."; return; }
+    buildMonth(id, state.copySel);
+    $("newMonthSheet").hidden = true;
+    goto(id);
+  }
+  // Cria o mês copiando as tabelas escolhidas (sel) e lançando as parcelas das compras parceladas
+  const defaultCopySel = () => new Set([...ctxs("income"), ...ctxs("expense")].filter(isRepeat).map(c => c.id));
+  function buildMonth(id, sel) {
     if (!state.months[id]) {
       const srcs = copySources(id), now = Date.now();
-      const copied = [...srcs].filter(([cid]) => state.copySel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
+      const copied = [...srcs].filter(([cid]) => sel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
         const o = { ...e, id: uid(), at: now + i };
         delete o.paid;                     // conta paga no mês passado volta a ficar em aberto
         // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
@@ -2146,9 +2238,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       state.months[id] = { entries: [...copied, ...insts] };
       store.saveMonth(id);
       hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : "") + (insts.length ? ` e ${countLabel(insts.length, "parcela", "parcelas")}` : ""));
+      return copied.length + insts.length;
     }
-    $("newMonthSheet").hidden = true;
-    goto(id);
+    return 0;
   }
   $("openNewMonth").addEventListener("click", openNewMonth);
   $("startMonth").addEventListener("click", openNewMonth);
