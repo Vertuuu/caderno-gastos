@@ -159,6 +159,19 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
 - Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
 
+### Previsão do saldo
+
+- Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".
+- Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**.
+- Se o saldo ficar **negativo**, um aviso mostra em quais dias e qual é o pior valor. O trecho negativo do gráfico fica em vermelho.
+- **Gráfico:** passe o mouse (ou toque) para ver o saldo de cada dia e o que entra e sai nele. Com o teclado, use as setas. **Ver dia a dia** abre a mesma informação em tabela.
+- **Saldo no início do mês:** clique em **Alterar** para informar quanto já havia na conta (aceita valor negativo, como `-150,50`). Ou use **Usar a sobra do mês anterior** para começar com o que sobrou no mês passado.
+- **Regras usadas:**
+  - Entradas sem data contam no dia 1.
+  - Gastos sem data (Comida, Uber…) são espalhados igualmente pelo mês.
+  - No mês atual, conta vencida e não paga é contada como saindo hoje.
+  - Conta paga antes do vencimento também é contada como saindo hoje.
+
 ### Meses
 
 - **Novo mês** com cópia automática dos itens das tabelas marcadas para repetir (por padrão, Gastos Fixos e Salário). Na hora de criar, dá para escolher quais copiar.

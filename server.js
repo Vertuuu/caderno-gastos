@@ -47,6 +47,7 @@ function normalize(raw, problems) {
       const ok = m.entries.filter(e => isObj(e) && typeof e.id === "string" && typeof e.value === "number" && Number.isFinite(e.value));
       if (ok.length !== m.entries.length) problems.push(`registros inválidos descartados em ${id}`);
       out.months[id] = { entries: ok };
+      if (Number.isFinite(m.opening) && Math.abs(m.opening) <= MAX_VALUE) out.months[id].opening = m.opening;
     }
   } else if (d.months !== undefined) problems.push("meses em formato inválido");
   out.goals = Array.isArray(d.goals) ? d.goals.filter(g => isObj(g) && typeof g.id === "string") : [];
@@ -237,7 +238,9 @@ function cleanMonth(b) {
     isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
     (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid))) return null;
   if (!uniqueIds(b.entries)) return null;
-  return { entries: b.entries.map(e => {
+  // saldo no início do mês (opcional, pode ser negativo), usado na previsão do saldo
+  if (b.opening !== undefined && !(typeof b.opening === "number" && Number.isFinite(b.opening) && Math.abs(b.opening) <= MAX_VALUE)) return null;
+  const out = { entries: b.entries.map(e => {
     const o = { id: e.id, kind: e.kind, ctx: e.ctx, name: e.name, value: e.value };
     if (e.at !== undefined) o.at = e.at;
     if (e.day !== undefined) o.day = e.day;
@@ -245,6 +248,8 @@ function cleanMonth(b) {
     if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
     return o;
   }) };
+  if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
+  return out;
 }
 
 function cleanGoals(b) {
@@ -366,7 +371,7 @@ const server = http.createServer(async (req, res) => {
       if (has || touched.length) {
         safetyBackup("tabela");
         if (has) { data.settings = { ...data.settings, [kind]: data.settings[kind].filter(c => c.id !== id) }; keys.push("settings"); }
-        for (const mid of touched) { data.months[mid] = { entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
+        for (const mid of touched) { data.months[mid] = { ...data.months[mid], entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
       }
       const out = keys.length ? commit(keys) : { rev: data.rev, prevRev: data.rev, docRev: {} };
       out.docs = {};

@@ -259,6 +259,56 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .alerts .daychip { grid-area: 2 / 1; justify-self: start; }
   .alerts .btn { grid-area: 2 / 2; justify-self: end; }
 }
+.forecast { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.fc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fc-head h2 { margin: 0; font-size: 18px; }
+.fc-figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fc-fig { display: grid; gap: 2px; min-width: 0; }
+.fc-fig .lab { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fc-fig .big { font-family: var(--f-num); font-size: 22px; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-fig .big.neg, .fc-tip .neg { color: var(--spend); }
+.fc-fig .sub { font-size: 12.5px; color: var(--muted); }
+.fc-warn { margin: 0; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--spend-soft); color: var(--ink); font-size: 14px; }
+.fc-warn b { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--spend); color: #fff; display: grid; place-items: center; font-size: 13px; }
+.fc-chart { position: relative; min-width: 0; }
+.fc-chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.fc-chart svg rect[tabindex]:focus { outline: none; }
+.fc-chart svg:has(rect[tabindex]:focus-visible) { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 6px; }
+.fc-grid { stroke: var(--hair); stroke-width: 1; }
+.fc-zero { stroke: var(--faint); stroke-width: 1; }
+.fc-axis { fill: var(--muted); font-size: 11px; font-family: var(--f-num); }
+.fc-line { fill: none; stroke: var(--focus); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.fc-line.neg { stroke: var(--spend); }
+.fc-area { fill: var(--focus); opacity: .1; }
+.fc-area.neg { fill: var(--spend); opacity: .14; }
+.fc-today { stroke: var(--muted); stroke-width: 1; }
+.fc-today-lab { font-family: inherit; font-weight: 600; }
+.fc-dot { fill: var(--focus); stroke: var(--surface); stroke-width: 2; }
+.fc-dot.neg { fill: var(--spend); }
+.fc-label { fill: var(--ink); font-size: 12px; font-weight: 600; font-family: var(--f-num); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.fc-cross { stroke: var(--muted); stroke-width: 1; }
+.fc-tip { position: absolute; z-index: 2; pointer-events: none; display: grid; gap: 2px; min-width: 160px; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12.5px; }
+.fc-ev { font-family: var(--f-num); font-size: 12.5px; }
+.fc-ev.in { color: var(--earn); }
+.fc-ev.out { color: var(--ink); }
+.fc-open { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.fc-open input { width: 130px; border: 1px solid var(--focus); border-radius: 8px; padding: 6px 9px; background: var(--surface); text-align: right; font-family: var(--f-num); }
+.fc-open .btn { padding: 4px 10px; font-size: 13px; }
+.fc-table summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); }
+.fc-table table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+.fc-table th, .fc-table td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--hair); vertical-align: top; }
+.fc-table thead th { border-top: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+.fc-table tbody th { font-weight: 500; white-space: nowrap; }
+.fc-evs { display: flex; flex-direction: column; gap: 2px; }
+.fc-table .num { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fc-table tr.is-today { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+.fc-table tr.is-neg td.num { color: var(--spend); }
+@media (max-width: 640px) {
+  .forecast { padding: 16px 14px; }
+  .fc-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fc-fig.end { grid-column: 1 / -1; }
+  .fc-fig .big { font-size: 19px; }
+}
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -477,6 +527,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       <div class="legend" id="legend"></div>
     </section>
 
+    <section class="forecast" id="forecast" hidden aria-labelledby="fcTitle"></section>
+
     <section class="section sec-in" id="secIn" aria-labelledby="hIn">
       <div class="sec-head"><h2 id="hIn">Entradas <span class="tag" id="cIn"></span></h2><span class="sum num" id="sIn"></span></div>
       <div class="board" id="boardIn"></div>
@@ -599,18 +651,21 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
     if (local === null) return null;                  // mês excluído aqui
     const entries = mergeById(base && base.entries, local.entries, remote ? remote.entries : []);
-    return remote === null && entries.length === 0 ? null : { entries };
+    // saldo inicial: vale o daqui se foi mudado aqui; se não, o de lá
+    const opening = (base ? base.opening : undefined) !== local.opening ? local.opening : (remote ? remote.opening : undefined);
+    if (remote === null && entries.length === 0) return null;
+    return opening === undefined ? { entries } : { entries, opening };
   }
   function docGet(key) {
     if (key === "settings") return { expense: state.settings.expense, income: state.settings.income };
     if (key === "goals") return { goals: state.goals };
     const m = state.months[key.slice(2)];
-    return m ? { entries: m.entries } : null;
+    return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
   }
   function docSet(key, doc) {
     if (key === "settings") state.settings = { expense: doc.expense, income: doc.income };
     else if (key === "goals") state.goals = doc.goals;
-    else if (doc) state.months[key.slice(2)] = { entries: doc.entries };
+    else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
     else delete state.months[key.slice(2)];
   }
   const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : (d.months[key.slice(2)] || null);
@@ -1000,7 +1055,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("goals").hidden = view !== "goals";
     if (view !== "lanc") {
       $("newMonthSheet").hidden = true;
-      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts"].forEach(id => $(id).hidden = true);
+      ["welcome", "summary", "secIn", "secOut", "monthTools", "alerts", "forecast"].forEach(id => $(id).hidden = true);
       document.title = `${view === "charts" ? "Gráficos" : "Metas"} · Caderno de Gastos`;
       if (store.ready && view === "charts" && window.renderCharts) window.renderCharts(chartsApi);
       if (store.ready && view === "goals" && window.renderGoals) window.renderGoals(chartsApi);
@@ -1011,7 +1066,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     ["summary", "secIn", "secOut", "monthTools"].forEach(id => $(id).hidden = !has);
     if (has) $("clearMonth").disabled = entries().length === 0;
     renderNav();
-    if (has) { renderAlerts(); renderSummary(); renderBoard("income"); renderBoard("expense"); } else $("alerts").hidden = true;
+    if (has) { renderAlerts(); renderSummary(); renderForecast(); renderBoard("income"); renderBoard("expense"); } else $("alerts").hidden = $("forecast").hidden = true;
     if (state.focusAdder) {
       const inp = document.querySelector(`.adder[data-ctx="${state.focusAdder}"] input`);
       if (inp) inp.focus();
@@ -1089,6 +1144,222 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
           el("button", { class: "btn", type: "button", "aria-label": `Marcar ${e.name} como paga`, onclick: () => togglePaid(e.id, mid) }, "✓ Paga"));
       })));
   }
+
+  // ---------- Previsão do saldo ----------
+  // Saldo dia a dia no mês: começa no saldo inicial do mês (opcional) e soma/subtrai cada registro no dia dele.
+  // Entradas sem data contam no dia 1; gastos sem data (Comida, Uber…) são espalhados igualmente pelos dias.
+  // No mês atual, conta em aberto já vencida sai "hoje" e conta paga antes do vencimento também.
+  const WEEK = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const weekday = (monthId, d) => { const [y, m] = monthId.split("-").map(Number); return WEEK[new Date(y, m - 1, d).getDay()]; };
+  const monthEnd = (id) => {
+    const m = state.months[id];
+    if (!m) return null;
+    const c = Math.round((m.opening || 0) * 100) + m.entries.reduce((s, e) => s + (e.kind === "income" ? 1 : -1) * Math.round(e.value * 100), 0);
+    return c / 100;
+  };
+  function forecast(mid) {
+    const m = state.months[mid], last = daysIn(mid), cur = currentMonthId();
+    const today = mid === cur ? new Date().getDate() : null;
+    const delta = new Array(last + 1).fill(0), events = Array.from({ length: last + 1 }, () => []);
+    let loose = 0, dated = 0;
+    for (const e of m.entries) {
+      const c = Math.round(e.value * 100);
+      if (e.kind === "income") {
+        const d = Math.min(e.day || 1, last);
+        delta[d] += c; events[d].push({ name: e.name, value: e.value, sign: 1, guess: !e.day });
+        if (e.day) dated++;
+      } else if (e.day) {
+        let d = dueDay(mid, Math.min(e.day, last));
+        if (today && ((e.paid && d > today) || (!e.paid && d < today))) d = today;
+        delta[d] -= c; events[d].push({ name: e.name, value: e.value, sign: -1, paid: !!e.paid });
+        dated++;
+      } else loose += c;
+    }
+    const spread = [];
+    for (let d = 1; d <= last; d++) {
+      const s = Math.round(loose * d / last) - Math.round(loose * (d - 1) / last);
+      spread[d] = s / 100; delta[d] -= s;
+    }
+    const opening = (m.opening || 0);
+    let bal = Math.round(opening * 100);
+    const days = [];
+    for (let d = 1; d <= last; d++) { bal += delta[d]; days.push({ d, bal: bal / 100, events: events[d], spread: spread[d] }); }
+    const min = days.reduce((a, b) => b.bal < a.bal ? b : a, days[0]);
+    const neg = [];      // trechos com saldo negativo [início, fim]
+    days.forEach(x => { if (x.bal < 0) { const r = neg[neg.length - 1]; if (r && r[1] === x.d - 1) r[1] = x.d; else neg.push([x.d, x.d]); } });
+    return { mid, last, today, opening, days, min, end: days[last - 1].bal, neg, loose: loose / 100, dated };
+  }
+
+  const BRLc = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
+  const signed = (n) => (n < 0 ? "−" : "+") + fmt(Math.abs(n));
+  const fmtBal = (n) => (n < 0 ? "−" : "") + fmt(Math.abs(n));
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const svg = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v); return e; };
+  const niceStep = (range, n) => { const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
+
+  function renderForecast() {
+    const box = $("forecast"), mid = state.selected, m = state.months[mid];
+    if (!m || !m.entries.length) { box.hidden = true; box.replaceChildren(); return; }
+    box.hidden = false;
+    const f = forecast(mid), prev = shiftMonth(mid, -1), prevEnd = monthEnd(prev);
+    const negDays = f.neg.reduce((s, [a, b]) => s + b - a + 1, 0);
+
+    // números
+    const fig = (cls, lab, big, sub) => el("div", { class: "fc-fig " + cls }, el("span", { class: "lab" }, lab), el("span", { class: "big num" + (big < 0 ? " neg" : "") }, fmtBal(big)), el("span", { class: "sub" }, sub));
+    const todayRow = f.today ? f.days[f.today - 1] : null;
+    const figs = el("div", { class: "fc-figs" },
+      todayRow ? fig("now", "Saldo hoje", todayRow.bal, `${weekday(mid, f.today)}, ${dayLabel(mid, f.today)}`) : fig("now", "Início do mês", f.opening, f.opening ? "saldo inicial" : "sem saldo inicial"),
+      fig("low", "Menor saldo", f.min.bal, `${weekday(mid, f.min.d)}, ${dayLabel(mid, f.min.d)}`),
+      fig("end", "Fim do mês", f.end, f.end < 0 ? "faltaria dinheiro" : "sobra prevista"));
+
+    // aviso de saldo negativo (ícone + texto, nunca só cor)
+    const warn = f.neg.length ? el("p", { class: "fc-warn", role: "status" }, el("b", { "aria-hidden": "true" }, "!"),
+      `O saldo fica negativo ${f.neg.map(([a, b]) => a === b ? `no dia ${a}` : `de ${dayLabel(mid, a)} a ${dayLabel(mid, b)}`).join(" e ")}` +
+      ` (${countLabel(negDays, "dia", "dias")}; o pior é ${fmtBal(f.min.bal)} em ${dayLabel(mid, f.min.d)}).` +
+      (f.end >= 0 ? " Até o fim do mês o saldo volta a ficar positivo." : "")) : null;
+
+    // saldo inicial
+    let opening;
+    if (state.fcEdit === mid) {
+      const inp = el("input", { class: "val", inputmode: "decimal", value: f.opening ? fmtPlain(f.opening) : "", placeholder: "0,00", "aria-label": "Saldo no início do mês" });
+      let done = false;
+      const commit = (save) => {
+        if (done) return; done = true;
+        if (save) {
+          const raw = inp.value.trim(), negv = /^[-−]/.test(raw), v = raw === "" ? 0 : parseMoney(raw.replace(/^[-−]\s*/, ""));
+          if (!Number.isFinite(v)) { done = false; inp.setCustomValidity("Valor inválido"); inp.reportValidity(); return; }
+          setOpening(mid, negv ? -v : v);
+        }
+        state.fcEdit = null; render();
+      };
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); });
+      inp.addEventListener("blur", () => setTimeout(() => commit(true), 0));
+      requestAnimationFrame(() => { inp.focus(); inp.select(); });
+      opening = el("div", { class: "fc-open" }, el("span", {}, "Saldo no início do mês:"), inp, el("span", { class: "small" }, "Use − para negativo. Enter salva."));
+    } else {
+      const usePrev = prevEnd !== null && Math.round(prevEnd * 100) !== Math.round(f.opening * 100)
+        ? el("button", { class: "btn ghost", type: "button", onclick: () => setOpening(mid, prevEnd, `Saldo inicial de ${monthLabel(mid)} = sobra de ${monthLabel(prev)}`) }, `Usar a sobra de ${MONTHS[Number(prev.slice(5)) - 1]} (${fmtBal(prevEnd)})`) : null;
+      opening = el("div", { class: "fc-open" },
+        el("span", {}, "Saldo no início do mês: ", el("b", { class: "num" }, fmtBal(f.opening))),
+        el("button", { class: "btn ghost", type: "button", onclick: () => { state.fcEdit = mid; render(); } }, "Alterar"),
+        usePrev);
+    }
+
+    const chart = el("div", { class: "fc-chart" });
+    const note = !f.dated
+      ? el("p", { class: "small" }, "Dica: defina o dia das entradas e o vencimento das contas para a previsão ficar exata. Sem data, as entradas contam no dia 1 e os gastos são espalhados pelo mês.")
+      : f.loose > 0 ? el("p", { class: "small" }, `Gastos sem data (${fmt(f.loose)}) foram espalhados pelo mês, cerca de ${fmt(f.loose / f.last)} por dia.`) : null;
+
+    // tabela dia a dia (também é a versão em texto do gráfico)
+    const rowsT = f.days.filter(x => x.events.length || x.d === f.today || x.d === f.min.d).map(x => el("tr", { class: (x.d === f.today ? "is-today " : "") + (x.bal < 0 ? "is-neg" : "") },
+      el("th", { scope: "row" }, `${weekday(mid, x.d)} ${dayLabel(mid, x.d)}`, x.d === f.today ? el("small", {}, " hoje") : null),
+      el("td", {}, el("div", { class: "fc-evs" }, x.events.length ? x.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}` + (ev.paid ? " (paga)" : ""))) : el("span", { class: "small" }, "sem movimento com data"))),
+      el("td", { class: "num" }, fmtBal(x.bal))));
+    const table = el("details", { class: "fc-table" }, el("summary", {}, "Ver dia a dia"),
+      el("table", {}, el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Dia"), el("th", { scope: "col" }, "Movimentos"), el("th", { scope: "col", class: "num" }, "Saldo"))), el("tbody", {}, ...rowsT)));
+    if (state.fcOpen) table.open = true;
+    table.addEventListener("toggle", () => { state.fcOpen = table.open; });
+
+    box.replaceChildren(
+      el("div", { class: "fc-head" }, el("h2", { id: "fcTitle" }, "Previsão do saldo"), el("span", { class: "small" }, monthLabel(mid))),
+      ...[figs, warn, chart, note, opening, table].filter(Boolean));
+    drawForecast(chart, f);
+  }
+
+  function setOpening(mid, v, label) {
+    const m = state.months[mid];
+    if (!m) return;
+    v = Math.round(v * 100) / 100;
+    if ((m.opening || 0) === v) return render();
+    if (v) m.opening = v; else delete m.opening;
+    store.saveMonth(mid);
+    hist.label(label || `Saldo inicial de ${monthLabel(mid)}: ${fmtBal(v)}`);
+    render();
+  }
+
+  // Gráfico em degraus do saldo: linha de 2px, faixa abaixo de zero em vermelho, marcador do menor saldo,
+  // linha de "hoje" e mira com dica ao passar o mouse (ou setas do teclado).
+  function drawForecast(host, f) {
+    const W = Math.max(280, host.clientWidth || 600), H = W < 500 ? 170 : 200;
+    const pad = { l: 58, r: 14, t: 18, b: 26 };
+    const vals = [0, f.opening, ...f.days.map(x => x.bal)];
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi === lo) hi = lo + 100;
+    const step = niceStep(hi - lo, 3);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+    const x = (d) => pad.l + (d - 1) / Math.max(1, f.last - 1) * (W - pad.l - pad.r);
+    const y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
+    const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `Saldo previsto em ${monthLabel(f.mid)}: começa em ${fmtBal(f.days[0].bal)}, menor saldo ${fmtBal(f.min.bal)} no dia ${f.min.d} e termina em ${fmtBal(f.end)}.` });
+    const uid2 = "fc" + Math.random().toString(36).slice(2, 7);
+    const y0 = y(0);
+    const defs = svg("defs");
+    const cpA = svg("clipPath", { id: uid2 + "a" }); cpA.append(svg("rect", { x: 0, y: 0, width: W, height: Math.max(0, y0) }));
+    const cpB = svg("clipPath", { id: uid2 + "b" }); cpB.append(svg("rect", { x: 0, y: y0, width: W, height: Math.max(0, H - y0) }));
+    defs.append(cpA, cpB); s.append(defs);
+    // grade e eixo y
+    for (let v = lo; v <= hi + step / 2; v += step) {
+      s.append(svg("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), class: v === 0 ? "fc-zero" : "fc-grid" }));
+      const t = svg("text", { x: pad.l - 8, y: y(v) + 4, class: "fc-axis", "text-anchor": "end" }); t.textContent = Math.abs(v) < 0.005 ? "R$ 0" : (v < 0 ? "−" : "") + BRLc.format(Math.abs(v)); s.append(t);
+    }
+    // eixo x
+    const ticks = [...new Set([1, 5, 10, 15, 20, 25, f.last])].filter(d => d <= f.last && (d === f.last || f.last - d >= 3));
+    for (const d of ticks) { const t = svg("text", { x: x(d), y: H - 6, class: "fc-axis", "text-anchor": d === 1 ? "start" : d === f.last ? "end" : "middle" }); t.textContent = String(d); s.append(t); }
+    // linha em degraus (o saldo muda no dia e fica até o próximo)
+    let dLine = `M ${x(1)} ${y(f.days[0].bal)}`;
+    for (let i = 1; i < f.days.length; i++) dLine += ` H ${x(f.days[i].d)} V ${y(f.days[i].bal)}`;
+    const dArea = `${dLine} V ${y0} H ${x(1)} Z`;
+    s.append(svg("path", { d: dArea, class: "fc-area", "clip-path": `url(#${uid2}a)` }));
+    s.append(svg("path", { d: dArea, class: "fc-area neg", "clip-path": `url(#${uid2}b)` }));
+    s.append(svg("path", { d: dLine, class: "fc-line", "clip-path": `url(#${uid2}a)` }));
+    s.append(svg("path", { d: dLine, class: "fc-line neg", "clip-path": `url(#${uid2}b)` }));
+    // hoje
+    if (f.today) {
+      s.append(svg("line", { x1: x(f.today), x2: x(f.today), y1: pad.t - 6, y2: H - pad.b, class: "fc-today" }));
+      const t = svg("text", { x: x(f.today), y: pad.t - 8, class: "fc-axis fc-today-lab", "text-anchor": x(f.today) > W - 40 ? "end" : x(f.today) < pad.l + 20 ? "start" : "middle" }); t.textContent = "hoje"; s.append(t);
+    }
+    // menor saldo: marcador e rótulo direto
+    const mx = x(f.min.d), my = y(f.min.bal);
+    s.append(svg("circle", { cx: mx, cy: my, r: 4.5, class: "fc-dot" + (f.min.bal < 0 ? " neg" : "") }));
+    const ml = svg("text", { x: mx, y: my + (my > H - pad.b - 22 ? -10 : 18), class: "fc-label", "text-anchor": mx > W - 90 ? "end" : mx < pad.l + 60 ? "start" : "middle" });
+    ml.textContent = `menor: ${fmtBal(f.min.bal)}`; s.append(ml);
+    // mira + dica
+    const cross = svg("line", { y1: pad.t, y2: H - pad.b, class: "fc-cross", visibility: "hidden" });
+    const hot = svg("circle", { r: 4.5, class: "fc-dot", visibility: "hidden" });
+    s.append(cross, hot);
+    const tip = el("div", { class: "fc-tip", hidden: true, role: "status" });
+    const hit = svg("rect", { x: pad.l - 6, y: 0, width: W - pad.l - pad.r + 12, height: H, fill: "transparent", tabindex: "0", "aria-label": "Use as setas para ver o saldo de cada dia" });
+    s.append(hit);
+    let cur = null;
+    const show = (d) => {
+      d = Math.max(1, Math.min(f.last, d)); cur = d;
+      const r = f.days[d - 1], px = x(d), py = y(r.bal);
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+      hot.setAttribute("cx", px); hot.setAttribute("cy", py); hot.setAttribute("class", "fc-dot" + (r.bal < 0 ? " neg" : "")); hot.setAttribute("visibility", "visible");
+      tip.replaceChildren(el("b", {}, `${weekday(f.mid, d)}, ${dayLabel(f.mid, d)}`), el("span", {}, "Saldo: ", el("b", { class: "num" + (r.bal < 0 ? " neg" : "") }, fmtBal(r.bal))),
+        ...r.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}`)),
+        r.spread ? el("span", { class: "fc-ev out" }, `${signed(-r.spread)} gastos sem data`) : null);
+      tip.hidden = false;
+      const tw = tip.offsetWidth || 180;
+      tip.style.left = Math.min(Math.max(0, px - tw / 2), W - tw) + "px";
+      tip.style.top = (py > H / 2 ? Math.max(0, py - tip.offsetHeight - 14) : py + 14) + "px";
+    };
+    const hide = () => { cur = null; tip.hidden = true; cross.setAttribute("visibility", "hidden"); hot.setAttribute("visibility", "hidden"); };
+    const dayAt = (ev) => { const b = s.getBoundingClientRect(); const px = (ev.clientX - b.left) * (W / b.width); return Math.round((px - pad.l) / (W - pad.l - pad.r) * (f.last - 1)) + 1; };
+    hit.addEventListener("pointermove", (ev) => show(dayAt(ev)));
+    hit.addEventListener("pointerdown", (ev) => show(dayAt(ev)));
+    hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", () => show(f.today || f.min.d));
+    hit.addEventListener("blur", hide);
+    hit.addEventListener("keydown", (ev) => {
+      // sem dia escolhido ainda, a primeira seta mostra hoje (ou o dia do menor saldo)
+      if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") { ev.preventDefault(); show(cur ? cur + (ev.key === "ArrowRight" ? 1 : -1) : (f.today || f.min.d)); }
+      if (ev.key === "Escape") hide();
+    });
+    host.replaceChildren(s, tip);
+  }
+  // largura nova: redesenha só o gráfico
+  let fcResize = 0;
+  window.addEventListener("resize", () => { clearTimeout(fcResize); fcResize = setTimeout(() => { const h = document.querySelector("#forecast .fc-chart"); if (h && state.selected && state.months[state.selected] && !$("forecast").hidden) drawForecast(h, forecast(state.selected)); }, 150); });
 
   function renderSummary() {
     const es = entries();
