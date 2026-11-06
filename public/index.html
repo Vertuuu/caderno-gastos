@@ -340,6 +340,55 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .since-block li .daychip { margin: 0; }
 .since-block li b { font-family: var(--f-num); font-weight: 500; }
 .since-block .btn { padding: 5px 12px; font-size: 13px; }
+.importdlg { width: min(980px, calc(100vw - 24px)); max-height: calc(100vh - 32px); border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.importdlg[open] { display: grid; gap: 14px; padding: 18px 20px; overflow: auto; }
+.importdlg::backdrop { background: rgb(8 12 24 / .45); }
+.imp-head { display: flex; align-items: center; justify-content: space-between; }
+.imp-head h2 { margin: 0; font-size: 20px; }
+.imp-src { display: grid; gap: 8px; }
+.imp-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.imp-src textarea { width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--sunk); color: inherit; font-family: var(--f-num); font-size: 12.5px; }
+.imp-src details .btn { margin-top: 6px; }
+.imp-src summary, .imp-rules summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.imp-err { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--spend-soft); color: var(--ink); font-size: 14px; }
+.imp-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.imp-scroll { overflow: auto; max-height: 48vh; border: 1px solid var(--hair); border-radius: 10px; }
+.imp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.imp-table th, .imp-table td { padding: 6px 8px; border-top: 1px solid var(--hair); text-align: left; vertical-align: middle; }
+.imp-table thead th { position: sticky; top: 0; background: var(--surface); border-top: 0; font-size: 12px; color: var(--muted); z-index: 1; }
+.imp-table td input[type="text"] { width: 100%; min-width: 140px; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; background: transparent; color: inherit; }
+.imp-table td input[type="text"]:hover, .imp-table td input[type="text"]:focus { border-color: var(--line); background: var(--sunk); }
+.imp-table td small { display: block; font-size: 11.5px; color: var(--muted); padding-left: 7px; overflow-wrap: anywhere; }
+.imp-table td small em { font-style: normal; font-weight: 600; margin-left: 6px; color: var(--focus); }
+.imp-table select { max-width: 170px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+.imp-table .num { text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.imp-table td.income { color: var(--earn); }
+.imp-table tr.off td:not(:first-child) { opacity: .5; }
+.imp-table tr.missing td small em { color: var(--spend); }
+.imp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.imp-actions { display: flex; gap: 8px; }
+.imp-rules ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.imp-rules li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 4px 0; border-top: 1px solid var(--hair); }
+.imp-addrule { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.imp-addrule input, .imp-addrule select { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; min-width: 0; flex: 1 1 140px; }
+@media (max-width: 640px) {
+  .importdlg[open] { padding: 14px; }
+  /* no celular cada transação vira um bloco: marca | nome / data e valor / tabela */
+  .imp-table thead { display: none; }
+  .imp-table, .imp-table tbody { display: block; }
+  .imp-table tr { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; grid-template-areas: "c n n" "c d v" "c s s"; gap: 2px 6px; padding: 8px 6px; border-top: 1px solid var(--hair); }
+  .imp-table tr:first-child { border-top: 0; }
+  .imp-table td { border: 0; padding: 2px; }
+  .imp-table td:nth-child(1) { grid-area: c; padding-top: 6px; }
+  .imp-table td:nth-child(2) { grid-area: d; text-align: left; color: var(--muted); padding-left: 9px; }
+  .imp-table td:nth-child(3) { grid-area: n; }
+  .imp-table td:nth-child(4) { grid-area: s; }
+  .imp-table td:nth-child(5) { grid-area: v; }
+  .imp-table td input[type="text"] { min-width: 0; }
+  .imp-table select { max-width: none; width: 100%; }
+  .imp-scroll { max-height: none; overflow: visible; }
+  .monthtools { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
 .empty-rows { padding: 14px; font-size: 13px; color: var(--faint); border-bottom: 1px solid var(--hair); }
 
 .adder { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 6px; padding: 8px; background: color-mix(in srgb, var(--k) var(--row-k), var(--sunk)); }
@@ -542,6 +591,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     </div>
 
     <div class="monthtools" id="monthTools" hidden>
+      <button class="btn ghost" id="importBtn" title="Importar um extrato do banco ou a fatura do cartão (OFX ou CSV)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg>Importar extrato</button>
       <button class="btn ghost" id="clearMonth" title="Apaga todos os itens deste mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Limpar registros</button>
       <button class="btn ghost danger" id="deleteMonth" title="Remove o mês e seus registros"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 14l4 4M14 14l-4 4"/></svg>Excluir mês</button>
     </div>
@@ -594,6 +644,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   </form>
 </dialog>
 
+<dialog class="importdlg" id="importDlg" aria-labelledby="impTitle"></dialog>
+
 <div class="toast" id="toast" hidden role="status"><span id="toastText"></span><button id="toastUndo">Desfazer</button></div>
 
 <div class="histbar" id="histBar" role="group" aria-label="Histórico de ações">
@@ -641,7 +693,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   };
 
   const state = {
-    settings: { expense: [], income: [] },
+    settings: { expense: [], income: [], rules: [] },
     months: {},
     selected: null,
     menu: null,          // id do contexto com menu aberto
@@ -684,7 +736,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return out;
   }
   function mergeDoc(key, base, local, remote) {
-    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []) };
+    if (key === "settings") return { expense: mergeById(base && base.expense, local.expense, remote ? remote.expense : []), income: mergeById(base && base.income, local.income, remote ? remote.income : []),
+      rules: mergeById(base && base.rules, local.rules, remote ? remote.rules : []) };
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
     if (key === "plans") return { plans: mergeById(base && base.plans, local.plans, remote ? remote.plans : []) };
     if (local === null) return null;                  // mês excluído aqui
@@ -695,14 +748,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return opening === undefined ? { entries } : { entries, opening };
   }
   function docGet(key) {
-    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income };
+    if (key === "settings") return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [] };
     if (key === "goals") return { goals: state.goals };
     if (key === "plans") return { plans: state.plans };
     const m = state.months[key.slice(2)];
     return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
   }
   function docSet(key, doc) {
-    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income };
+    if (key === "settings") state.settings = { expense: doc.expense, income: doc.income, rules: doc.rules || [] };
     else if (key === "goals") state.goals = doc.goals;
     else if (key === "plans") state.plans = doc.plans;
     else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
@@ -1942,6 +1995,246 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     showToast(`Compra "${p.name}" excluída`, 10000);
   }
 
+  // ---------- Importar extrato (OFX / CSV) ----------
+  // Lê o arquivo do banco ou da fatura, mostra uma prévia e lança cada transação no mês da data dela.
+  // A tabela de cada linha vem, nesta ordem: das regras ("contém X" -> tabela), do histórico (mesmo nome já
+  // lançado antes) ou da escolha na prévia; o que foi escolhido à mão pode virar regra nova.
+  // Cada registro importado guarda "ext" (FITID do OFX ou data|valor|descrição) para não entrar duas vezes.
+  const rulesOf = () => (state.settings.rules || []).filter(r => findCtx(r.ctx)[1]);
+  const decodeEnt = (s) => s.replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'");
+  function parseOFX(text) {
+    const out = [];
+    for (const raw of text.split(/<STMTTRN>/i).slice(1)) {
+      const b = raw.split(/<\/STMTTRN>/i)[0];
+      const tag = (t) => { const m = b.match(new RegExp(`<${t}>([^<\\r\\n]*)`, "i")); return m ? decodeEnt(m[1].trim()) : ""; };
+      const amount = Number(tag("TRNAMT").replace(",", ".")), dt = tag("DTPOSTED");
+      if (!Number.isFinite(amount) || !/^\d{8}/.test(dt)) continue;
+      const name = tag("NAME"), memo = tag("MEMO");
+      const desc = name && memo && !plainName(memo).includes(plainName(name)) && !plainName(name).includes(plainName(memo)) ? `${name} ${memo}` : (memo.length > name.length ? memo : name);
+      out.push({ date: `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}`, desc: desc || "Sem descrição", amount, fitid: tag("FITID") });
+    }
+    return out;
+  }
+  function splitCSV(line, d) {
+    const out = []; let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+      else if (ch === '"') q = true; else if (ch === d) { out.push(cur); cur = ""; } else cur += ch;
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+  function parseAmount(s) {
+    s = String(s || "").replace(/R\$|\s/g, "");
+    if (!s) return NaN;
+    const neg = /^-|^\(.*\)$|-$/.test(s);
+    s = s.replace(/[()+-]/g, "");
+    if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(/,/g, "");
+    const n = Number(s);
+    return Number.isFinite(n) ? (neg ? -n : n) : NaN;
+  }
+  function parseDate(s) {
+    s = String(s || "").trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+    return null;
+  }
+  // devolve { rows, card } ou { error }
+  function parseCSV(text) {
+    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return { error: "O arquivo não tem linhas suficientes." };
+    const first = lines[0], d = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+    const head = splitCSV(first, d).map(h => plainName(h));
+    const find = (re, not) => head.findIndex(h => re.test(h) && !(not && not.test(h)));
+    const iDate = find(/^(data|date|dt)\b|data/), iDesc = find(/descri|historico|title|titulo|estabelecimento|lancamento|memo|nome|detalhe/, /^data/), iAmt = find(/^(valor|amount|value|quantia)|valor/, /saldo/);
+    if (iDate < 0 || iAmt < 0) return { error: "Não achei as colunas de data e valor. O CSV precisa ter cabeçalho com \"Data\" e \"Valor\" (ou date/amount)." };
+    const rows = [];
+    for (const l of lines.slice(1)) {
+      const c = splitCSV(l, d), date = parseDate(c[iDate]), amount = parseAmount(c[iAmt]);
+      if (!date || !Number.isFinite(amount) || amount === 0) continue;
+      const desc = (iDesc >= 0 ? c[iDesc] : "") || c.filter((_, i) => i !== iDate && i !== iAmt).find(x => x && /[a-z]/i.test(x)) || "Sem descrição";
+      rows.push({ date, desc, amount });
+    }
+    // fatura de cartão (ex.: Nubank "date,title,amount"): valor positivo é gasto
+    const card = head.includes("title") && head.includes("amount");
+    return rows.length ? { rows, card } : { error: "Nenhuma transação válida no arquivo." };
+  }
+  const STOP = new Set(["pix", "compra", "compras", "pagamento", "pagto", "pag", "transferencia", "transf", "ted", "doc", "debito", "credito", "cartao", "enviado", "enviada", "recebido", "recebida", "pelo", "pela", "de", "da", "do", "das", "dos", "em", "no", "na", "para", "com", "conta", "boleto", "tarifa", "aplicacao", "resgate", "ltda", "s/a", "sa", "me", "eireli", "visa", "master", "elo", "int", "nacional"]);
+  const learnKey = (desc) => (plainName(desc).match(/[a-z0-9]+/g) || []).find(w => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w)) || null;
+  const prettyName = (s) => {
+    s = s.replace(/\s+/g, " ").trim().slice(0, 120);
+    return s === s.toUpperCase() && /[A-Z]/.test(s) ? s.toLowerCase().replace(/(^|[\s*/(\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : s;
+  };
+  // tabela sugerida: regra > histórico (mesmo nome já lançado) > nenhuma
+  function suggest(kind, desc) {
+    const pd = plainName(desc);
+    const r = rulesOf().find(r => pd.includes(plainName(r.match)) && findCtx(r.ctx)[0] === kind);
+    if (r) return { ctx: r.ctx, name: r.name || prettyName(desc), how: "regra", rule: r.id };
+    const pn = plainName(prettyName(desc));
+    for (const m of monthIds().slice().reverse()) {
+      const e = state.months[m].entries.find(e => e.kind === kind && !e.ext && plainName(e.name) === pn && findCtx(e.ctx)[1]) ||
+        state.months[m].entries.find(e => e.kind === kind && e.ext && plainName(e.name) === pn && findCtx(e.ctx)[1]);
+      if (e) return { ctx: e.ctx, name: e.name, how: "histórico" };
+    }
+    return { ctx: "", name: prettyName(desc), how: "" };
+  }
+  const imp = { rows: [], card: false, learn: true, file: "", error: "" };
+  function buildRows(parsed, isOfx) {
+    imp.rows = parsed.map((t, i) => {
+      const amt = imp.card ? -t.amount : t.amount;
+      const kind = amt < 0 ? "expense" : "income", value = Math.round(Math.abs(amt) * 100) / 100;
+      const month = t.date.slice(0, 7), day = Number(t.date.slice(8, 10));
+      const ext = (t.fitid ? `ofx:${t.fitid}` : `csv:${t.date}|${amt.toFixed(2)}|${plainName(t.desc).replace(/\s+/g, " ")}`).slice(0, 80);
+      const sg = suggest(kind, t.desc);
+      const es = state.months[month] ? state.months[month].entries : [];
+      const dup = es.some(e => e.ext === ext) || es.some(e => e.kind === kind && Math.round(e.value * 100) === Math.round(value * 100) && e.day === day && plainName(e.name) === plainName(sg.name));
+      const billPay = /pagamento.*fatura|pagamento recebido|pagto fatura|fatura paga/i.test(plainName(t.desc));
+      const missing = !state.months[month];
+      return { i, date: t.date, month, day, desc: t.desc, kind, value, ext, name: sg.name, ctx: sg.ctx, how: sg.how, rule: sg.rule, dup, missing, billPay, touched: false,
+        on: !dup && !missing && !billPay && !!sg.ctx };
+    });
+    imp.isOfx = isOfx;
+  }
+  function reSuggest() {
+    imp.rows.forEach(r => { if (r.touched) return; const sg = suggest(r.kind, r.desc); r.ctx = sg.ctx; r.name = sg.name; r.how = sg.how; r.rule = sg.rule; if (!r.dup && !r.missing && !r.billPay) r.on = !!sg.ctx; });
+  }
+  async function readImport(text, fileName) {
+    imp.file = fileName || ""; imp.error = "";
+    const isOfx = /<OFX>|<STMTTRN>/i.test(text);
+    if (isOfx) {
+      const t = parseOFX(text);
+      if (!t.length) { imp.error = "Não encontrei transações neste OFX."; imp.rows = []; return renderImport(); }
+      imp.card = false;   // no OFX o sinal já vem certo (débito negativo), inclusive na fatura do cartão
+      imp.parsed = t; buildRows(t, true);
+    } else {
+      const r = parseCSV(text);
+      if (r.error) { imp.error = r.error; imp.rows = []; return renderImport(); }
+      imp.card = r.card; imp.parsed = r.rows; buildRows(r.rows, false);
+    }
+    renderImport();
+  }
+  function openImport() {
+    Object.assign(imp, { rows: [], parsed: null, card: false, learn: true, file: "", error: "" });
+    renderImport();
+    $("importDlg").showModal();
+  }
+  function closeImport() { if ($("importDlg").open) $("importDlg").close(); }
+  function ctxSelect(kind, value, onchange, label) {
+    const s = el("select", { "aria-label": label, onchange: (ev) => onchange(ev.target.value) },
+      el("option", { value: "" }, "Escolha a tabela…"), ...ctxs(kind).map(c => el("option", { value: c.id }, c.name)));
+    s.value = value || "";
+    return s;
+  }
+  function renderImport() {
+    const dlg = $("importDlg");
+    const file = el("input", { type: "file", accept: ".ofx,.qfx,.csv,.txt,text/csv", "aria-label": "Arquivo do extrato", onchange: async (ev) => {
+      const f = ev.target.files[0]; if (!f) return;
+      const buf = await f.arrayBuffer();
+      let text = new TextDecoder("utf-8").decode(buf);
+      if (text.includes("�")) text = new TextDecoder("windows-1252").decode(buf);   // OFX de banco brasileiro costuma vir em ANSI
+      readImport(text, f.name);
+    } });
+    const paste = el("textarea", { rows: "3", placeholder: "…ou cole aqui o conteúdo do CSV/OFX", "aria-label": "Conteúdo do extrato" });
+    const pasteBtn = el("button", { class: "btn", type: "button", onclick: () => { if (paste.value.trim()) readImport(paste.value, "texto colado"); } }, "Ler texto colado");
+    const head = el("div", { class: "imp-head" }, el("h2", { id: "impTitle" }, "Importar extrato"), el("button", { class: "iconbtn", type: "button", "aria-label": "Fechar", onclick: closeImport }, "×"));
+    const src = el("div", { class: "imp-src" },
+      el("p", { class: "small" }, "Exporte o extrato da conta ou a fatura do cartão no app do banco, em OFX (recomendado) ou CSV, e escolha o arquivo. Nada é enviado para fora do seu computador."),
+      el("div", { class: "imp-pick" }, file, el("span", { class: "small" }, imp.file ? `Lido: ${imp.file}` : "")),
+      el("details", {}, el("summary", {}, "Colar o conteúdo em vez de escolher o arquivo"), paste, pasteBtn));
+    const parts = [head, src];
+    if (imp.error) parts.push(el("p", { class: "imp-err", role: "alert" }, imp.error));
+    if (imp.rows.length) {
+      const chosen = imp.rows.filter(r => r.on && r.ctx && !r.missing);
+      const months = [...new Set(chosen.map(r => r.month))];
+      const counts = { dup: imp.rows.filter(r => r.dup).length, missing: imp.rows.filter(r => r.missing).length, pending: imp.rows.filter(r => r.on && !r.ctx).length };
+      const opts = el("div", { class: "imp-opts" },
+        imp.isOfx ? null : el("button", { class: "toggle", type: "button", "aria-pressed": String(imp.card), onclick: () => { imp.card = !imp.card; buildRows(imp.parsed, false); renderImport(); } }, el("span", { class: "box" }, "✓"), "Fatura de cartão (valor positivo é gasto)"),
+        el("button", { class: "toggle", type: "button", "aria-pressed": String(imp.learn), onclick: () => { imp.learn = !imp.learn; renderImport(); } }, el("span", { class: "box" }, "✓"), "Criar regras com as tabelas que eu escolher"));
+      const allOn = imp.rows.filter(r => !r.missing).every(r => r.on);
+      const table = el("table", { class: "imp-table" },
+        el("thead", {}, el("tr", {},
+          el("th", { scope: "col" }, el("input", { type: "checkbox", checked: allOn || null, "aria-label": "Marcar todas", onchange: (ev) => { imp.rows.forEach(r => { if (!r.missing) r.on = ev.target.checked; }); renderImport(); } })),
+          el("th", { scope: "col" }, "Data"), el("th", { scope: "col" }, "Nome"), el("th", { scope: "col" }, "Tabela"), el("th", { scope: "col", class: "num" }, "Valor"))),
+        el("tbody", {}, ...imp.rows.map(r => {
+          const note = r.missing ? `${monthLabel(r.month)} não existe: crie o mês antes` : r.dup ? "já lançado" : r.billPay ? "pagamento da fatura" : r.how === "regra" ? "pela regra" : r.how === "histórico" ? "como antes" : "";
+          const nm = el("input", { type: "text", value: r.name, maxlength: "120", "aria-label": `Nome de ${r.desc}`, onchange: (ev) => { r.name = ev.target.value.trim() || r.name; r.touched = true; } });
+          return el("tr", { class: (r.on ? "" : "off ") + (r.missing ? "missing" : "") },
+            el("td", {}, el("input", { type: "checkbox", checked: r.on || null, disabled: r.missing || null, "aria-label": `Importar ${r.desc}`, onchange: (ev) => { r.on = ev.target.checked; renderImport(); } })),
+            el("td", { class: "num" }, `${pad2(r.day)}/${r.month.slice(5)}`),
+            el("td", {}, nm, el("small", { title: r.desc }, r.desc !== r.name ? r.desc : "", note ? el("em", {}, note) : null)),
+            el("td", {}, ctxSelect(r.kind, r.ctx, (v) => { r.ctx = v; r.touched = true; r.how = ""; if (v && !r.missing) r.on = true; renderImport(); }, `Tabela de ${r.desc}`)),
+            el("td", { class: "num " + r.kind }, (r.kind === "income" ? "+" : "−") + fmtPlain(r.value)));
+        })));
+      const sumIn = sumMoney(chosen.filter(r => r.kind === "income").map(r => r.value)), sumOut = sumMoney(chosen.filter(r => r.kind === "expense").map(r => r.value));
+      const foot = el("div", { class: "imp-foot" },
+        el("p", { class: "small" }, `${countLabel(chosen.length, "transação", "transações")} para importar` + (months.length ? ` em ${months.map(shortMonthLabel).join(", ")}` : "") +
+          ` · +${fmt(sumIn)} · −${fmt(sumOut)}` + (counts.dup ? ` · ${countLabel(counts.dup, "já lançada", "já lançadas")}` : "") + (counts.pending ? ` · ${counts.pending} sem tabela` : "") + (counts.missing ? ` · ${counts.missing} em mês não criado` : "")),
+        el("div", { class: "imp-actions" }, el("button", { class: "btn", type: "button", onclick: closeImport }, "Cancelar"),
+          el("button", { class: "btn solid", type: "button", disabled: !chosen.length || null, onclick: doImport }, chosen.length ? `Importar ${countLabel(chosen.length, "item", "itens")}` : "Importar")));
+      parts.push(opts, el("div", { class: "imp-scroll" }, table), foot);
+    }
+    parts.push(rulesPanel());
+    dlg.replaceChildren(...parts);
+  }
+  function rulesPanel() {
+    const rules = rulesOf();
+    const match = el("input", { type: "text", maxlength: "60", placeholder: "contém… (ex.: uber)", "aria-label": "Texto que a descrição contém" });
+    const all = [...ctxs("expense").map(c => ["expense", c]), ...ctxs("income").map(c => ["income", c])];
+    const sel = el("select", { "aria-label": "Tabela da regra" }, el("option", { value: "" }, "Tabela…"), ...all.map(([k, c]) => el("option", { value: c.id }, `${c.name} (${k === "income" ? "entrada" : "saída"})`)));
+    const rename = el("input", { type: "text", maxlength: "120", placeholder: "renomear para (opcional)", "aria-label": "Novo nome" });
+    const add = el("button", { class: "btn", type: "button", onclick: () => {
+      const m = match.value.trim(); if (!m || !sel.value) { match.focus(); return; }
+      const r = { id: uid(), match: m, ctx: sel.value }; if (rename.value.trim()) r.name = rename.value.trim();
+      state.settings.rules = [...(state.settings.rules || []), r];
+      store.saveSettings(); hist.label(`Regra "${m}" criada`);
+      reSuggest(); renderImport();
+    } }, "Adicionar regra");
+    const det = el("details", { class: "imp-rules" }, el("summary", {}, `Regras automáticas (${rules.length})`),
+      rules.length ? el("ul", {}, ...rules.map(r => el("li", {}, el("span", {}, "contém ", el("b", {}, `“${r.match}”`), " → ", findCtx(r.ctx)[1].name, r.name ? ` · vira “${r.name}”` : ""),
+        el("button", { class: "iconbtn", type: "button", "aria-label": `Apagar a regra ${r.match}`, onclick: () => {
+          state.settings.rules = (state.settings.rules || []).filter(x => x.id !== r.id); store.saveSettings(); hist.label(`Regra "${r.match}" apagada`); reSuggest(); renderImport();
+        } }, "×")))) : el("p", { class: "small" }, "Nenhuma regra ainda. Elas são criadas sozinhas quando você escolhe a tabela de uma transação na importação, ou aqui."),
+      el("div", { class: "imp-addrule" }, match, sel, rename, add));
+    if (state.rulesOpen) det.open = true;
+    det.addEventListener("toggle", () => { state.rulesOpen = det.open; });
+    return det;
+  }
+  function doImport() {
+    const chosen = imp.rows.filter(r => r.on && r.ctx && !r.missing && state.months[r.month] && findCtx(r.ctx)[1]);
+    if (!chosen.length) return;
+    const now = Date.now(), touched = new Set();
+    chosen.forEach((r, i) => {
+      const e = { id: uid(), kind: r.kind, ctx: r.ctx, name: (r.name || r.desc).slice(0, 120), value: r.value, day: r.day, ext: r.ext, at: now + i };
+      if (r.kind === "expense") e.paid = true;      // já aconteceu: não vira conta "a vencer"
+      state.months[r.month].entries.push(e);
+      touched.add(r.month);
+    });
+    touched.forEach(m => store.saveMonth(m));
+    // regras novas a partir das escolhas feitas à mão
+    let learned = 0;
+    if (imp.learn) {
+      const rules = [...(state.settings.rules || [])];
+      for (const r of chosen) {
+        if (r.how === "regra" || !r.touched) continue;
+        const key = learnKey(r.desc);
+        if (!key || rules.some(x => plainName(x.match) === key)) continue;
+        const rule = { id: uid(), match: key, ctx: r.ctx };
+        if (r.name && plainName(r.name) !== plainName(prettyName(r.desc))) rule.name = r.name;
+        rules.push(rule); learned++;
+      }
+      if (learned) { state.settings.rules = rules; store.saveSettings(); }
+    }
+    closeImport();
+    const first = [...touched].sort().pop();
+    if (first && first !== state.selected) goto(first); else render();
+    showToast(`${countLabel(chosen.length, "item importado", "itens importados")}` + (learned ? ` e ${countLabel(learned, "regra nova", "regras novas")}` : ""), 10000);
+  }
+  $("importBtn").addEventListener("click", openImport);
+  $("importDlg").addEventListener("click", (e) => { if (e.target === $("importDlg")) closeImport(); });
+
   // ---------- Ações ----------
   function togglePaid(id, mid = state.selected) {
     const t = state.months[mid] && state.months[mid].entries.find(x => x.id === id);
@@ -2228,6 +2521,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const copied = [...srcs].filter(([cid]) => sel.has(cid)).flatMap(([, s]) => s.items.map((e, i) => {
         const o = { ...e, id: uid(), at: now + i };
         delete o.paid;                     // conta paga no mês passado volta a ficar em aberto
+        delete o.ext;                      // a cópia não é a mesma transação do extrato
         // a data é recalculada para o novo mês (o 5º dia útil muda de mês para mês)
         const c = findCtx(e.ctx)[1], p = partOf(c, e);
         if (p) o.day = payDay(id, p, c.pay.sat);

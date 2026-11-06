@@ -169,6 +169,20 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
   - **Excluir compra** apaga a compra e todas as parcelas dela.
 - As parcelas com dia de vencimento entram nos lembretes de contas e na previsão do saldo.
 
+### Importar extrato
+
+- **Importar extrato** fica no topo de Lançamentos, ao lado de Limpar registros.
+- **De onde vem o arquivo:** exporte o extrato da conta ou a fatura do cartão no app do banco, em **OFX** (recomendado) ou **CSV**. Escolha o arquivo ou cole o conteúdo. Nada sai do seu computador.
+  - **CSV:** precisa ter cabeçalho com data e valor. Funciona com `;` ou `,`, valores no formato `1.234,56` ou `1234.56` e datas `dd/mm/aaaa` ou `aaaa-mm-dd`.
+  - **Fatura de cartão em CSV:** valor positivo é gasto. O modelo do Nubank (`date,title,amount`) é reconhecido sozinho.
+- **Na prévia,** cada transação vai para o mês da data dela, e a **tabela** vem sozinha, nesta ordem:
+  1. pelas **regras** ("contém uber → Uber");
+  2. pelo **histórico** (um item com o mesmo nome já lançado antes);
+  3. ou você escolhe na hora.
+- **Linhas que já vêm desmarcadas:** transações **já lançadas**, que nunca entram duas vezes; transações sem tabela; e o pagamento da própria fatura. Meses que ainda não existem aparecem bloqueados.
+- **Regras automáticas:** com a opção **Criar regras com as tabelas que eu escolher**, cada escolha feita à mão vira uma regra para as próximas importações. Em **Regras automáticas** dá para criar regras (com nome novo opcional, ex.: "ifood" → Mercado, como "iFood") ou apagar as que existem.
+- **Gastos importados** já entram como **pagos** e com o dia da compra, então aparecem na previsão do saldo sem virar "conta a vencer".
+
 ### Desde a última vez
 
 - Ao abrir o app, um quadro no topo resume o que aconteceu no mês desde a sua **última visita** naquele aparelho:

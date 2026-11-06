@@ -41,6 +41,8 @@ function normalize(raw, problems) {
     out.settings[k] = list.filter(c => isObj(c) && typeof c.id === "string" && typeof c.name === "string");
     if (out.settings[k].length !== list.length) problems.push(`tabelas inválidas descartadas em ${k}`);
   }
+  // regras automáticas da importação de extrato
+  out.settings.rules = isObj(d.settings) && Array.isArray(d.settings.rules) ? d.settings.rules.filter(r => isObj(r) && typeof r.id === "string" && typeof r.match === "string") : [];
   if (isObj(d.months)) {
     for (const [id, m] of Object.entries(d.months)) {
       if (!MONTH_RE.test(id) || !isObj(m) || !Array.isArray(m.entries)) { problems.push(`mês ${id} inválido descartado`); continue; }
@@ -230,6 +232,12 @@ function cleanSettings(b) {
     });
   }
   if (!uniqueIds([...out.expense, ...out.income])) return null;
+  // regras da importação: "descrição contém <match>" -> tabela <ctx>, com nome opcional
+  if (b.rules !== undefined) {
+    if (!Array.isArray(b.rules) || b.rules.length > 300 || !uniqueIds(b.rules) ||
+      !b.rules.every(r => isObj(r) && isStr(r.id, 40) && isStr(r.match, 60) && isStr(r.ctx, 40) && (r.name === undefined || isStr(r.name, 120)))) return null;
+    out.rules = b.rules.map(r => r.name === undefined ? { id: r.id, match: r.match, ctx: r.ctx } : { id: r.id, match: r.match, ctx: r.ctx, name: r.name });
+  }
   return out;
 }
 
@@ -237,7 +245,7 @@ function cleanMonth(b) {
   if (!isObj(b) || !Array.isArray(b.entries) || b.entries.length > 5000) return null;
   if (!b.entries.every(e => isObj(e) && isStr(e.id, 40) && (e.kind === "expense" || e.kind === "income") && isStr(e.ctx, 40) &&
     isStr(e.name, 120) && posNum(e.value) && e.value <= MAX_VALUE && (e.at === undefined || posNum(e.at)) &&
-    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid) &&
+    (e.day === undefined || (Number.isInteger(e.day) && e.day >= 1 && e.day <= 31)) && (e.part === undefined || isStr(e.part, 40)) && optBool(e.paid) && (e.ext === undefined || isStr(e.ext, 80)) &&
     (e.inst === undefined || (isObj(e.inst) && isStr(e.inst.plan, 40) && Number.isInteger(e.inst.k) && e.inst.k >= 0 && e.inst.k <= 120)))) return null;
   if (!uniqueIds(b.entries)) return null;
   // saldo no início do mês (opcional, pode ser negativo), usado na previsão do saldo
@@ -248,7 +256,8 @@ function cleanMonth(b) {
     if (e.day !== undefined) o.day = e.day;
     if (e.part !== undefined) o.part = e.part;
     if (e.paid === true) o.paid = true;      // conta de saída marcada como paga
-    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };   // parcela k de uma compra parcelada (0 = antecipação)
+    if (e.inst !== undefined) o.inst = { plan: e.inst.plan, k: e.inst.k };
+    if (e.ext !== undefined) o.ext = e.ext;   // identificador da transação importada do extrato (evita duplicar)   // parcela k de uma compra parcelada (0 = antecipação)
     return o;
   }) };
   if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
