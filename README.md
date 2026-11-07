@@ -52,11 +52,11 @@ Abra a pasta `caderno-gastos` e escolha um dos jeitos:
 
 - liga o app sem janela preta de terminal e mostra quando ele está **ativo**;
 - mostra os endereços para abrir no computador e no celular, com botão de copiar;
-- tem os botões **Abrir no navegador** e **Ligar/Desligar** (desligar salva tudo antes);
-- cria um **atalho na Área de Trabalho** e pode **ligar junto com o Windows**, já minimizado;
+- tem os botões **Abrir no navegador** e **Ligar/Desligar** (desligar salva tudo antes). Se o app já estava ligado pelo `iniciar.bat`, o **Desligar** do painel também desliga ele;
+- cria um **atalho na Área de Trabalho** e pode **ligar junto com o Windows**, já minimizado (se você mudar a pasta de lugar, o atalho de inicialização é corrigido sozinho na próxima vez que o painel abrir);
 - tem tema claro, escuro ou igual ao Windows.
 
-Ao fechar a janela, ele pergunta se você quer desligar o app ou só minimizar.
+Ao fechar a janela, ele pergunta se você quer desligar o app ou só minimizar. Abrir o painel de novo traz para frente a janela que já está aberta. Se algo der errado no painel, os detalhes ficam em `app/erro.log`.
 
 **Pelo terminal:** dê dois cliques em **`iniciar.bat`**. Abre uma janela preta com os endereços. Deixe essa janela aberta enquanto usa o app; fechar desliga.
 

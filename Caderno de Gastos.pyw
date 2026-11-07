@@ -12,6 +12,8 @@ import sys
 import threading
 import time
 import tkinter as tk
+import traceback
+import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
@@ -20,8 +22,32 @@ from tkinter import messagebox
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / "app" / "assets"
 CONFIG = ROOT / "app" / "config.json"
+ERROR_LOG = ROOT / "app" / "erro.log"
 APP_NAME = "Caderno de Gastos"
+APP_ID = "caderno-gastos"          # o que o /api/health responde em "app"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+# ---------- Registro de erros ----------
+# Com pythonw não existe console: sem isso, um erro ao abrir o painel some sem deixar rastro.
+def log_error(where, text):
+    try:
+        ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
+        if ERROR_LOG.exists() and ERROR_LOG.stat().st_size > 200_000:   # guarda só o final
+            ERROR_LOG.write_text(ERROR_LOG.read_text(encoding="utf-8", errors="replace")[-100_000:], encoding="utf-8")
+        with ERROR_LOG.open("a", encoding="utf-8") as f:
+            f.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] {where}\n{text.rstrip()}\n")
+    except OSError:
+        pass
+
+
+def native_alert(text):
+    """Aviso do Windows que funciona mesmo quando o Tk não abriu."""
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(None, text, APP_NAME, 0x10)
+    except Exception:
+        pass
 
 # Paletas iguais às do site (tema claro e escuro)
 PALETTES = {
@@ -70,12 +96,25 @@ def set_dark_titlebar(root, dark):
 
 
 # ---------- Configuração ----------
+CONFIG_DEFAULTS = {"port": 3000, "open_browser": True, "theme": "auto"}
+
+
 def load_config():
-    cfg = {"port": 3000, "open_browser": True}
+    """Lê app/config.json. Arquivo ausente, quebrado ou com valor inválido: vale o padrão daquele item."""
+    cfg = dict(CONFIG_DEFAULTS)
     try:
-        cfg.update(json.loads(CONFIG.read_text(encoding="utf-8")))
+        raw = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
-        pass
+        return cfg
+    if not isinstance(raw, dict):
+        return cfg
+    port = raw.get("port")
+    if isinstance(port, int) and not isinstance(port, bool) and 1 <= port <= 65535:
+        cfg["port"] = port
+    if isinstance(raw.get("open_browser"), bool):
+        cfg["open_browser"] = raw["open_browser"]
+    if raw.get("theme") in ("light", "dark", "auto"):
+        cfg["theme"] = raw["theme"]
     return cfg
 
 
@@ -88,29 +127,74 @@ def save_config(cfg):
 
 
 # ---------- Rede ----------
+def private_rank(ip):
+    """0 = 192.168.x, 1 = 10.x, 2 = 172.16–31.x (faixas de rede local); 3 = o resto (VPN, CGNAT…)."""
+    try:
+        a, b = (int(x) for x in ip.split(".")[:2])
+    except ValueError:
+        return 3
+    if a == 192 and b == 168:
+        return 0
+    if a == 10:
+        return 1
+    if a == 172 and 16 <= b <= 31:
+        return 2
+    return 3
+
+
+def order_addresses(ips, route=None):
+    """Ordena os IPs para o celular: primeiro o da rota de saída (a placa que acessa a internet, quase sempre
+    o Wi-Fi ou o cabo) se for de rede local; depois as faixas de rede local; VPNs e afins por último.
+    Assim um 172.x do WSL/Hyper-V ou um 10.x de VPN não aparecem no lugar do Wi-Fi."""
+    ips = {ip for ip in ips if ip and not ip.startswith(("127.", "169.254.", "0."))}
+    if route and route.startswith(("127.", "169.254.", "0.")):
+        route = None
+    return sorted(ips, key=lambda ip: (0 if ip == route and private_rank(ip) < 3 else 1, private_rank(ip), ip))
+
+
 def lan_addresses():
-    ips = set()
+    ips, route = set(), None
     try:
         for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
             ips.add(info[4][0])
     except OSError:
         pass
     try:  # descobre o IP da interface de saída (sem enviar nada)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("10.255.255.255", 1))
-        ips.add(s.getsockname()[0])
-        s.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            route = s.getsockname()[0]
+            ips.add(route)
     except OSError:
         pass
-    ips = [ip for ip in ips if not ip.startswith(("127.", "169.254."))]
-    # redes domésticas primeiro
-    return sorted(ips, key=lambda ip: (not ip.startswith(("192.168.", "10.", "172.")), ip))
+    return order_addresses(ips, route)
 
 
-def server_alive(port, timeout=0.8):
+def server_info(port, timeout=0.8):
+    """Resposta do /api/health se for o Caderno de Gastos; {} para um Caderno antigo, sem essa rota;
+    None se nada responde ou se a porta é de outro programa."""
+    base = f"http://127.0.0.1:{port}"
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/data?rev=-2", timeout=timeout) as r:
-            return r.status == 200
+        with urllib.request.urlopen(f"{base}/api/health", timeout=timeout) as r:
+            d = json.loads(r.read() or b"{}")
+            return d if isinstance(d, dict) and d.get("app") == APP_ID else None
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            return None
+    except Exception:
+        return None
+    try:  # servidor de antes do /api/health (ex.: iniciar.bat de uma cópia antiga)
+        with urllib.request.urlopen(f"{base}/api/data?rev=-2", timeout=timeout) as r:
+            return {} if r.status == 200 else None
+    except Exception:
+        return None
+
+
+def request_shutdown(port):
+    """Pede ao servidor para gravar e sair (só é aceito do próprio computador)."""
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/shutdown", method="POST", data=b"")
+        urllib.request.urlopen(req, timeout=2).read()
+        return True
     except Exception:
         return False
 
@@ -140,26 +224,49 @@ def pythonw():
     return str(cand if cand.exists() else exe)
 
 
+def shortcut_args(extra_args=""):
+    return f'"{Path(__file__).resolve()}" {extra_args}'.strip()
+
+
+def run_powershell(script, env):
+    """Roda um comando do PowerShell com saída em UTF-8 (sem perder acentos) e devolve o stdout.
+    Em caso de erro, a exceção traz a mensagem do próprio PowerShell."""
+    ps = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$ErrorActionPreference='Stop';" + script
+    out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], env=dict(os.environ, **env),
+                         creationflags=NO_WINDOW, capture_output=True, timeout=20)
+    stdout = out.stdout.decode("utf-8", "replace").strip()
+    if out.returncode != 0:
+        err = out.stderr.decode("utf-8", "replace").strip() or stdout or f"código {out.returncode}"
+        raise RuntimeError(err)
+    return stdout
+
+
 def make_shortcut(link_path, extra_args=""):
-    script = Path(__file__).resolve()
-    ps = (
+    run_powershell(
         "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
         "$s.TargetPath=$env:TGT;$s.Arguments=$env:ARGS;$s.WorkingDirectory=$env:WD;"
-        "$s.IconLocation=$env:ICO;$s.Description='Abre o Caderno de Gastos';$s.Save()"
-    )
-    env = dict(os.environ, LNK=str(link_path), TGT=pythonw(), ARGS=f'"{script}" {extra_args}'.strip(),
-               WD=str(ROOT), ICO=str(ASSETS / "icone.ico"))
-    subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
-                   env=env, check=True, creationflags=NO_WINDOW, capture_output=True)
+        "$s.IconLocation=$env:ICO;$s.Description='Abre o Caderno de Gastos';$s.Save()",
+        {"LNK": str(link_path), "TGT": pythonw(), "ARGS": shortcut_args(extra_args), "WD": str(ROOT), "ICO": str(ASSETS / "icone.ico")})
+
+
+def read_shortcut(link_path):
+    """(programa, argumentos) de um atalho .lnk."""
+    out = run_powershell("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
+                         "Write-Output $s.TargetPath;Write-Output $s.Arguments", {"LNK": str(link_path)})
+    lines = out.splitlines() + ["", ""]
+    return lines[0].strip(), lines[1].strip()
 
 
 def desktop_dir():
+    """Pasta da Área de Trabalho pelo registro do Windows (vale também quando o OneDrive a moveu,
+    como em "OneDrive\\Área de Trabalho")."""
     try:
-        out = subprocess.run(["powershell", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"],
-                             capture_output=True, text=True, creationflags=NO_WINDOW)
-        if out.stdout.strip():
-            return Path(out.stdout.strip())
-    except OSError:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders") as k:
+            p = Path(os.path.expandvars(winreg.QueryValueEx(k, "Desktop")[0]))
+        if p.is_dir():
+            return p
+    except (OSError, ImportError):
         pass
     return Path.home() / "Desktop"
 
@@ -176,7 +283,12 @@ class App:
         self.proc = None
         self.owned = False          # o servidor foi aberto por este app?
         self.state = "parado"
+        # Fila única entre as threads e a janela: linhas do registro (str) ou funções a rodar na thread do Tk.
+        # Só a thread principal mexe na tela (o Tkinter não garante chamadas vindas de outras threads).
         self.logq = queue.Queue()
+        self.gen = 0                # muda a cada ligar/desligar: descarta respostas de checagens antigas
+        self.ips = []               # IPs da rede, descobertos fora da thread da janela
+        self.checking = False
         self.opened_once = False
         self.start_minimized = start_minimized
 
@@ -327,7 +439,7 @@ class App:
         if not active:
             return
         rows = [("Neste computador", f"http://localhost:{self.port}")]
-        ips = lan_addresses()
+        ips = self.ips
         if ips:  # o primeiro é a rede de casa (192.168…, 10…); VPNs e afins ficam de fora
             rows.append(("Celular / outros aparelhos", f"http://{ips[0]}:{self.port}"))
         for label, url in rows:
@@ -366,9 +478,7 @@ class App:
         self.open_btn.configure(state="normal" if on else "disabled",
                                 bg=C["green"] if on else C["gray_soft"], disabledforeground=C["muted"],
                                 cursor="hand2" if on else "arrow")
-        if state == "externo":
-            self.toggle_btn.configure(text="Desligar", state="disabled")
-        elif on:
+        if on:
             self.toggle_btn.configure(text="Desligar", state="normal")
         elif state in ("parado", "erro"):
             self.toggle_btn.configure(text="Ligar", state="normal")
@@ -377,6 +487,8 @@ class App:
         self.toggle_btn.configure(disabledforeground=C["muted"])
         self.status_text = sub
         self.render_addresses(on)
+        if on:
+            self.refresh_ips()
         self.refresh_title()
 
     def refresh_title(self):
@@ -395,10 +507,42 @@ class App:
     def pump_log(self):
         try:
             while True:
-                self.write_log(self.logq.get_nowait())
+                item = self.logq.get_nowait()
+                if isinstance(item, str):
+                    self.write_log(item)
+                else:
+                    fn, args = item
+                    try:
+                        fn(*args)
+                    except Exception:
+                        self.root.report_callback_exception(*sys.exc_info())
         except queue.Empty:
             pass
-        self.root.after(200, self.pump_log)
+        self.root.after(100, self.pump_log)
+
+    def post(self, fn, *args):
+        """Agenda fn(*args) na thread da janela (pode ser chamado de qualquer thread)."""
+        self.logq.put((fn, args))
+
+    def bg(self, work, then=None, *, gen=None):
+        """Roda work() fora da janela e entrega o resultado a then() na thread da janela.
+        Com gen, a resposta é descartada se o servidor foi ligado/desligado no meio do caminho."""
+        def run():
+            try:
+                res = work()
+            except Exception:
+                log_error("Erro em segundo plano", traceback.format_exc())
+                return
+            if then:
+                self.post(lambda: then(res) if gen is None or gen == self.gen else None)
+        threading.Thread(target=run, daemon=True).start()
+
+    def refresh_ips(self):
+        def got(ips):
+            if ips != self.ips:
+                self.ips = ips
+                self.render_addresses(self.state in ("ativo", "externo"))
+        self.bg(lan_addresses, got)
 
     def toggle_log(self):
         self.log_open = not self.log_open
@@ -410,16 +554,25 @@ class App:
             self.log_link.configure(text="Ocultar registro ▴")
 
     # ----- servidor -----
+    # As checagens de rede rodam em threads (self.bg) para a janela não travar; as respostas voltam pela fila.
     def boot(self):
         if self.start_minimized:
             self.root.iconify()
-        if server_alive(self.port):
-            self.owned = False
-            self.set_status("externo", "Já estava ligado por outra janela (por exemplo o iniciar.bat). "
-                                       "Para desligar por aqui, feche a outra janela e clique em Ligar.")
-            self.watch()
+        self.bg(fix_startup_shortcut, lambda msg: msg and self.write_log(msg))
+        self.bg(lambda: server_info(self.port), self.on_boot_info)
+
+    def on_boot_info(self, info):
+        if info is not None:
+            self.set_external()
             return
         self.start()
+
+    def set_external(self):
+        self.owned = False
+        self.gen += 1
+        self.set_status("externo", "Já estava ligado por outra janela (por exemplo o iniciar.bat). "
+                                   "Desligar daqui também desliga o de lá.")
+        self.watch()
 
     def start(self):
         node = find_node()
@@ -427,7 +580,9 @@ class App:
             self.set_status("erro", "O Node.js não foi encontrado. Instale a versão LTS em nodejs.org e abra este app de novo.")
             return
         if port_busy(self.port):
-            self.set_status("erro", f"A porta {self.port} está ocupada por outro programa. Feche-o e clique em Ligar.")
+            # pode ser um Caderno ligado em outra janela depois que este painel abriu
+            self.bg(lambda: server_info(self.port), lambda info: self.set_external() if info is not None else
+                    self.set_status("erro", f"A porta {self.port} está ocupada por outro programa. Feche-o e clique em Ligar."))
             return
         self.set_status("iniciando", "Iniciando o servidor…")
         env = dict(os.environ, PORT=str(self.port))
@@ -439,8 +594,9 @@ class App:
             self.set_status("erro", f"Erro ao iniciar o Node.js: {e}")
             return
         self.owned = True
+        self.gen += 1
         threading.Thread(target=self.read_output, args=(self.proc,), daemon=True).start()
-        self.wait_ready(time.time())
+        self.bg(lambda p=self.proc: self.wait_ready(p), self.on_ready, gen=self.gen)
 
     def read_output(self, proc):
         for line in proc.stdout:
@@ -448,64 +604,104 @@ class App:
                 self.logq.put(line)
         self.logq.put(f"[servidor encerrado, código {proc.wait()}]")
 
-    def wait_ready(self, t0):
-        if self.proc and self.proc.poll() is not None:
-            self.set_status("erro", "O servidor fechou logo ao iniciar. Abra \"Ver registro\" para ver o motivo.")
-            if not self.log_open:
-                self.toggle_log()
-            return
-        if server_alive(self.port, 0.4):
+    def wait_ready(self, proc, limit=15):
+        """(fora da janela) Espera o servidor responder. Devolve "ok", "fechou" ou "timeout"."""
+        t0 = time.time()
+        while True:
+            if proc.poll() is not None:
+                return "fechou"
+            if server_info(self.port, 0.4) is not None:
+                return "ok"
+            if time.time() - t0 > limit:
+                # não deixa um node travado segurando a porta
+                proc.kill()
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    pass
+                return "timeout"
+            time.sleep(0.3)
+
+    def on_ready(self, res):
+        if res == "ok":
             self.set_status("ativo", "Pode usar no navegador deste computador ou de qualquer aparelho na mesma rede Wi-Fi.")
             if self.var_open.get() and not self.opened_once and not self.start_minimized:
                 self.open_browser()
             self.opened_once = True
             self.watch()
             return
-        if time.time() - t0 > 15:
-            self.set_status("erro", "O servidor não respondeu em 15 segundos. Veja o registro.")
-            return
-        self.root.after(300, lambda: self.wait_ready(t0))
+        self.proc, self.owned = None, False
+        if res == "fechou":
+            self.set_status("erro", "O servidor fechou logo ao iniciar. Abra \"Ver registro\" para ver o motivo.")
+        else:
+            self.set_status("erro", "O servidor não respondeu em 15 segundos e foi encerrado. Veja o registro.")
+        if not self.log_open:
+            self.toggle_log()
 
     def watch(self):
-        """Confere a cada 3 s se o servidor continua respondendo."""
-        if self.state not in ("ativo", "externo"):
+        """Confere a cada 3 s se o servidor continua respondendo (pelo /api/health, resposta curta)."""
+        if self.state not in ("ativo", "externo") or self.checking:
             return
-        alive = server_alive(self.port)
-        if not alive:
-            if self.owned and self.proc and self.proc.poll() is not None:
-                self.set_status("erro", "O servidor parou sozinho. Veja o registro e clique em Ligar.")
-            else:
-                self.set_status("parado", "O servidor foi desligado.")
-            return
-        self.root.after(3000, self.watch)
+        self.checking = True
+        gen = self.gen
+
+        def got(info):
+            self.checking = False
+            if gen != self.gen or self.state not in ("ativo", "externo"):
+                return
+            if info is None:
+                if self.owned and self.proc and self.proc.poll() is not None:
+                    self.proc, self.owned = None, False
+                    self.set_status("erro", "O servidor parou sozinho. Veja o registro e clique em Ligar.")
+                else:
+                    self.set_status("parado", "O servidor foi desligado.")
+                return
+            self.root.after(3000, self.watch)
+
+        self.bg(lambda: server_info(self.port), got)
 
     def stop(self, then=None):
+        external = not self.owned
         self.set_status("parando", "Salvando os dados e desligando…")
+        self.gen += 1
+        proc = self.proc
 
         def work():
-            try:  # desligamento educado: o servidor grava as últimas mudanças antes de sair
-                req = urllib.request.Request(f"http://127.0.0.1:{self.port}/api/shutdown", method="POST", data=b"")
-                urllib.request.urlopen(req, timeout=2).read()
-            except Exception:
-                pass
-            if self.proc:
+            # desligamento educado: o servidor grava as últimas mudanças antes de sair
+            request_shutdown(self.port)
+            if proc:
                 try:
-                    self.proc.wait(timeout=4)
+                    proc.wait(timeout=4)
                 except subprocess.TimeoutExpired:
-                    self.proc.kill()
-            self.root.after(0, done)
+                    proc.kill()
+                    try:
+                        proc.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        pass
+                return True
+            # servidor de outra janela: confere que ele realmente saiu
+            for _ in range(20):
+                if server_info(self.port, 0.4) is None:
+                    return True
+                time.sleep(0.25)
+            return False
 
-        def done():
+        def done(stopped):
             self.proc = None
             self.owned = False
-            self.set_status("parado", "Clique em Ligar para usar o site de novo.")
+            self.checking = False
+            if not stopped and external:
+                self.set_external()
+                self.set_status("externo", "Não consegui desligar o servidor da outra janela. Feche essa janela (por exemplo a do iniciar.bat).")
+            else:
+                self.set_status("parado", "Clique em Ligar para usar o site de novo.")
             if then:
                 then()
 
-        threading.Thread(target=work, daemon=True).start()
+        self.bg(work, done)
 
     def toggle(self):
-        if self.state == "ativo":
+        if self.state in ("ativo", "externo"):
             self.stop()
         elif self.state in ("parado", "erro"):
             self.start()
@@ -537,7 +733,10 @@ class App:
             messagebox.showerror(APP_NAME, f"Não consegui criar o atalho.\n\n{e}")
 
     def on_close(self):
-        if self.owned and self.state in ("ativo", "iniciando"):
+        if self.state == "parando":
+            return
+        # pergunta sempre que o node aberto por este painel ainda estiver rodando (qualquer estado)
+        if self.proc and self.proc.poll() is None:
             ans = messagebox.askyesnocancel(
                 APP_NAME,
                 "O servidor está ligado.\n\n"
@@ -554,6 +753,55 @@ class App:
         self.root.destroy()
 
 
+_MUTEX = None
+
+
+def already_running():
+    """Instância única: se outro painel já está aberto, traz a janela dele para frente e devolve True."""
+    global _MUTEX
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateMutexW.restype = wintypes.HANDLE
+        k32.CreateMutexW.argtypes = (ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR)
+        _MUTEX = k32.CreateMutexW(None, False, "Local\\CadernoDeGastos.Painel")
+        if ctypes.get_last_error() != 183:      # ERROR_ALREADY_EXISTS
+            return False
+        user32 = ctypes.windll.user32
+        proc_t = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        found = []
+
+        def each(hwnd, _):
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, buf, 256)
+            if buf.value == "TkTopLevel":
+                user32.GetWindowTextW(hwnd, buf, 256)
+                if buf.value.startswith(APP_NAME + " ·"):
+                    found.append(hwnd)
+            return True
+        user32.EnumWindows(proc_t(each), 0)
+        for hwnd in found:
+            user32.ShowWindow(hwnd, 9)          # SW_RESTORE
+            user32.SetForegroundWindow(hwnd)
+        return True
+    except Exception:
+        return False
+
+
+def fix_startup_shortcut():
+    """Se a pasta do app (ou o Python) mudou de lugar, o atalho de inicialização apontaria para o caminho
+    antigo: recria. Devolve uma linha para o registro, ou None."""
+    if not STARTUP_LNK.exists():
+        return None
+    target, args = read_shortcut(STARTUP_LNK)
+    want_args = shortcut_args("--minimizado")
+    if os.path.normcase(target) == os.path.normcase(pythonw()) and args == want_args:
+        return None
+    make_shortcut(STARTUP_LNK, "--minimizado")
+    return "[atalho de inicialização atualizado para o caminho atual do app]"
+
+
 def main():
     try:  # ícone próprio na barra de tarefas, em vez do ícone do Python
         import ctypes
@@ -561,8 +809,30 @@ def main():
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         pass
-    root = tk.Tk()
-    App(root, start_minimized="--minimizado" in sys.argv)
+    if already_running():
+        return
+    try:
+        root = tk.Tk()
+    except Exception:
+        log_error("Erro ao abrir a janela", traceback.format_exc())
+        native_alert(f"Não consegui abrir o painel.\n\nDetalhes em:\n{ERROR_LOG}")
+        return
+
+    def on_tk_error(exc, val, tb):
+        text = "".join(traceback.format_exception(exc, val, tb))
+        log_error("Erro no painel", text)
+        try:
+            messagebox.showerror(APP_NAME, f"Algo deu errado no painel:\n{val}\n\nDetalhes em:\n{ERROR_LOG}")
+        except Exception:
+            pass
+    root.report_callback_exception = on_tk_error
+    try:
+        App(root, start_minimized="--minimizado" in sys.argv)
+    except Exception:
+        log_error("Erro ao abrir o painel", traceback.format_exc())
+        messagebox.showerror(APP_NAME, f"Não consegui abrir o painel.\n\nDetalhes em:\n{ERROR_LOG}")
+        root.destroy()
+        return
     root.mainloop()
 
 
