@@ -138,14 +138,17 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Registros com nome e valor** dentro de cada tabela. Clique no nome ou no valor para editar e no × para remover.
 - **Resumo do mês**: quanto entrou, quanto saiu, quanto sobrou e uma barra com o peso de cada tabela na renda.
 - **Mover tabelas** de posição arrastando pela alça ⠿ ou pelos botões **← Antes / Depois →** no menu ⋯. A ordem vale para todos os meses.
+- **Ordenar tabelas:** ao lado do título **Entradas** e **Saídas**, escolha **Manual (arrastar)**, **Nome A–Z**, **Nome Z–A**, **Maior valor**, **Menor valor** ou **Mais registros** (valor e registros do mês aberto). Fora do Manual, a alça de arrastar some.
+- **Ordenar itens de uma tabela:** no seletor **⇅** acima dos itens: **Data (dia 1 → 31)** (padrão), **Data (dia 31 → 1)**, **Nome A–Z**, **Nome Z–A**, **Maior valor** ou **Menor valor**. Cada tabela guarda a sua escolha.
+- As ordenações valem para todos os aparelhos e entram no **desfazer**.
 - **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
 
 ### Data dos lançamentos
 
-- Toda entrada e saída tem uma **data**, mostrada no selo ao lado do nome. O item novo entra com a data de **hoje**; num mês que não é o atual, com o mesmo número do dia de hoje (no dia 31, um mês mais curto usa o último dia).
-- Para mudar a data de um item, **clique no selo da data**: abre o calendário, com qualquer dia do mês aberto. Clicando no nome, a data também aparece para editar, embaixo do nome e do valor.
+- Toda entrada e saída tem uma **data**, mostrada numa coluna própria, depois do valor. O item novo entra com a data de **hoje**; num mês que não é o atual, com o mesmo número do dia de hoje (no dia 31, um mês mais curto usa o último dia).
+- Para mudar a data de um item, **clique na data**: abre o calendário, com qualquer dia do mês aberto. Na edição, o nome fica em cima e o valor e a data embaixo.
 - **Saída com data de hoje ou passada** fica **paga**. **Saída com data futura** vira **conta a vencer**, com lembrete e bolinha de paga (veja Vencimento das contas). Mudar a data recalcula isso; a bolinha continua desmarcando.
 - Registros antigos, lançados antes de a data existir, contam pelo dia em que foram lançados (ou no dia 1, se foram lançados em outro mês) até você editá-los.
 
@@ -161,8 +164,8 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 ### Vencimento das contas
 
 - Uma **saída com data futura** é uma conta a vencer naquele dia (ex.: Aluguel dia 5, lançado no dia 1). Ao criar o mês seguinte, ela repete no mesmo dia.
-- A saída tem uma **bolinha para marcar como paga** e um selo com a situação: **venceu**, **vence hoje**, **vence amanhã / em N dias** (até 3 dias antes), **vence dd/mm** ou, quando paga, a **data**. Os itens aparecem na ordem da data.
-- Se o vencimento cai em **fim de semana ou feriado**, vale o próximo dia útil, como num boleto (passe o mouse no selo para ver).
+- A saída tem uma **bolinha para marcar como paga** e a data na coluna própria: fica **vermelha** quando a conta venceu e **amarela** quando vence hoje ou nos próximos 3 dias (passe o mouse para ver a situação). Os itens aparecem na ordem da data (dá para mudar no **⇅** da tabela).
+- Se o vencimento cai em **fim de semana ou feriado**, vale o próximo dia útil, como num boleto (a coluna da data já mostra o dia útil).
 - No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
 - Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
 
