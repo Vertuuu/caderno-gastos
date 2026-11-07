@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -153,11 +153,25 @@ main .inner { padding-block: 22px 96px; display: grid; gap: 30px; }
 .sec-head h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: 24px; display: flex; align-items: center; gap: 10px; }
 .sec-head h2 .tag { font-family: var(--f-num); font-size: 15px; font-weight: 500; color: var(--muted); }
 .sec-head .sum { font-size: 18px; font-weight: 600; }
+/* ordenar: tabelas da seção (no título) e itens de cada tabela (acima da lista) */
+.sortsel { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sortsel select, .itemsort select { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 500; font-size: 13px; }
+@media (max-width: 640px) { .sortsel { order: 3; flex-basis: 100%; margin-right: 0; } }
+/* barra "Ordenar" de cada tabela: faixa própria logo abaixo do cabeçalho */
+.itemsort { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 6px 12px; font-size: 13px; font-weight: 600; color: var(--ink);
+  background: color-mix(in srgb, var(--k) 9%, var(--surface)); border-bottom: 1px solid var(--hair); }
+.itemsort > span { display: inline-flex; align-items: center; gap: 6px; }
+.itemsort > span b { color: var(--k); font-size: 14px; }
+.itemsort select { border: 1px solid color-mix(in srgb, var(--k) 45%, var(--line)); background: var(--surface); padding: 4px 8px; cursor: pointer; min-width: 0; }
+.itemsort select:hover, .itemsort select:focus-visible { border-color: var(--k); }
 .sec-in .sum { color: var(--earn); } .sec-out .sum { color: var(--spend); }
-.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; align-items: start; }
+/* cartões da mesma linha com a altura do maior; a linha de inclusão fica sempre embaixo */
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; align-items: stretch; }
+.board > .newcard { align-self: start; }
 
 /* ---------- Cartão-tabela ---------- */
-.card { background: color-mix(in srgb, var(--k) var(--row-k), var(--surface)); border: 1px solid color-mix(in srgb, var(--k) var(--card-k), var(--line)); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: grid; min-width: 0; }
+.card { background: color-mix(in srgb, var(--k) var(--row-k), var(--surface)); border: 1px solid color-mix(in srgb, var(--k) var(--card-k), var(--line)); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.card > .rows, .card > .empty-rows { flex: 1 0 auto; }
 .card-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 11px 8px 11px 6px; background: color-mix(in srgb, var(--k) var(--head-mix), var(--surface)); color: var(--head-ink); border-bottom: 2px solid var(--k); }
 /* nome da tabela inteiro: num cartão estreito ele quebra entre as palavras e os ícones (↻, calendário)
    descem para a linha de baixo, em vez de o nome virar "S…" */
@@ -204,7 +218,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .menu .pos-n { font-size: 13px; color: var(--muted); min-width: 44px; text-align: center; }
 
 .rows { list-style: none; margin: 0; padding: 0; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 6px; padding: 0 6px 0 4px; border-bottom: 1px solid var(--hair); min-height: 40px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto 46px 30px; align-items: center; gap: 6px; padding: 0 6px 0 4px; border-bottom: 1px solid var(--hair); min-height: 40px; }
 .row:hover { background: color-mix(in srgb, var(--k) 8%, var(--surface)); }
 .cell { border: 0; background: transparent; text-align: left; padding: 8px 10px; border-radius: 7px; min-width: 0; }
 .cell.name { overflow-wrap: anywhere; }
@@ -216,12 +230,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .row .del:hover { background: var(--spend-soft); color: var(--spend); }
 .row input { border: 1px solid var(--focus); border-radius: 7px; padding: 6px 9px; background: var(--surface); width: 100%; min-width: 0; }
 .row input.val { text-align: right; font-family: var(--f-num); width: 112px; }
-.row.with-day { padding-block: 6px; row-gap: 4px; }
-/* linha da data: na edição e na inclusão, embaixo de nome e valor */
-.dateline { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 12.5px; color: var(--muted); }
-.dateline > span:first-child { font-weight: 600; }
-.dateline input.date { width: auto; min-width: 0; padding: 4px 8px; font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); color-scheme: light dark; }
-.dateline .small { font-size: 12px; }
+/* edição: nome na linha de cima; valor, data e salvar embaixo */
+.row.with-day { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px; padding-block: 6px; row-gap: 6px; }
+.row.with-day > input:first-child { grid-column: 1 / -1; }
+.row.with-day input.val, .row.with-day input.date { width: 100%; }
+.row input.date { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 13px; padding-inline: 6px; color-scheme: light dark; }
+/* coluna da data: discreta; cor só em conta vencida, vencendo hoje ou nos próximos dias */
+.cell.date { padding: 8px 2px; text-align: center; font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.cell.date.due-later { color: var(--ink); }
+.cell.date.due-late { color: var(--spend); font-weight: 600; }
+.cell.date.due-today, .cell.date.due-soon { color: var(--warn); font-weight: 600; }
 .daychip { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-family: var(--f-num); font-variant-numeric: tabular-nums; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; white-space: nowrap; }
 .daychip.paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
 .card-title .paybadge { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
@@ -240,9 +258,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .payline .iconbtn { width: 30px; height: 30px; }
 .payfoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .paybox > .btn { justify-self: start; }
-.row.has-check { grid-template-columns: 22px minmax(0, 1fr) auto 30px; padding-left: 8px; }
-.cell.name .daychip { cursor: pointer; }
-.cell.name .daychip:hover { border-color: var(--focus); }
+.row.has-check { grid-template-columns: 22px minmax(0, 1fr) auto 46px 30px; padding-left: 8px; }
 .paycheck { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--faint); background: transparent; color: transparent; display: grid; place-items: center; font-size: 10px; line-height: 1; padding: 0; }
 .paycheck:hover { border-color: var(--earn); color: color-mix(in srgb, var(--earn) 60%, transparent); }
 .paycheck[aria-pressed="true"] { background: var(--earn); border-color: var(--earn); color: #fff; }
@@ -345,7 +361,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .instopts select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
 @media (max-width: 640px) {
   /* no celular, campos com letra igual à dos outros campos (menor que isso, o iPhone dá zoom ao tocar) */
-  .dateline input.date, .adder .instopts input, .instopts select, .payline select, .menu .payline input, .imp-table select, .imp-addrule input, .imp-addrule select { font-size: 15px; }
+  .sortsel select, .itemsort select, .row input.date, .adder .instopts input, .instopts select, .payline select, .menu .payline input, .imp-table select, .imp-addrule input, .imp-addrule select { font-size: 15px; }
 }
 .instprev { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); font-family: var(--f-num); }
 .instlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
@@ -651,12 +667,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     <section class="forecast" id="forecast" hidden aria-labelledby="fcTitle"></section>
 
     <section class="section sec-in" id="secIn" aria-labelledby="hIn">
-      <div class="sec-head"><h2 id="hIn">Entradas <span class="tag" id="cIn"></span></h2><span class="sum num" id="sIn"></span></div>
+      <div class="sec-head"><h2 id="hIn">Entradas <span class="tag" id="cIn"></span></h2>
+        <label class="sortsel">Ordenar <select id="tsIn" aria-label="Ordenar as tabelas de entradas"></select></label>
+        <span class="sum num" id="sIn"></span></div>
       <div class="board" id="boardIn"></div>
     </section>
 
     <section class="section sec-out" id="secOut" aria-labelledby="hOut">
-      <div class="sec-head"><h2 id="hOut">Saídas <span class="tag" id="cOut"></span></h2><span class="sum num" id="sOut"></span></div>
+      <div class="sec-head"><h2 id="hOut">Saídas <span class="tag" id="cOut"></span></h2>
+        <label class="sortsel">Ordenar <select id="tsOut" aria-label="Ordenar as tabelas de saídas"></select></label>
+        <span class="sum num" id="sOut"></span></div>
       <div class="board" id="boardOut"></div>
     </section>
 
@@ -780,6 +800,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       // previsão do saldo ligada: vale a daqui se foi mudada aqui; se não, a de lá
       const on = (d) => !!(d && d.forecast === true);
       out.forecast = on(base) !== on(local) ? on(local) : on(remote);
+      // ordem das tabelas em cada seção: a daqui se foi mudada aqui; se não, a de lá
+      const ts = (d, k) => (d && d.tableSort && d.tableSort[k]) || "manual";
+      out.tableSort = {};
+      for (const k of ["income", "expense"]) out.tableSort[k] = ts(base, k) !== ts(local, k) ? ts(local, k) : ts(remote, k);
       return out;
     }
     if (key === "goals") return { goals: mergeById(base && base.goals, local.goals, remote ? remote.goals : []) };
@@ -794,7 +818,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function docGet(key) {
     if (key === "settings") {
       // "forecast" vai sempre como true/false: sem o campo, o servidor manteria o valor antigo
-      return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [], forecast: state.settings.forecast === true };
+      return { expense: state.settings.expense, income: state.settings.income, rules: state.settings.rules || [], forecast: state.settings.forecast === true,
+        tableSort: { income: tableSortOf("income"), expense: tableSortOf("expense") } };
     }
     if (key === "goals") return { goals: state.goals };
     if (key === "plans") return { plans: state.plans };
@@ -805,6 +830,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (key === "settings") {
       state.settings = { expense: doc.expense, income: doc.income, rules: doc.rules || [] };
       state.settings.forecast = doc.forecast === true;
+      state.settings.tableSort = { ...(doc.tableSort || {}) };
     }
     else if (key === "goals") state.goals = doc.goals;
     else if (key === "plans") state.plans = doc.plans;
@@ -1685,10 +1711,56 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     $("stack").hidden = $("legend").hidden = base === 0;
   }
 
+  // ---------- Ordenação ----------
+  // Tabelas de cada seção (settings.tableSort[kind]) e itens de cada tabela (c.sort). Salvas nas
+  // configurações do caderno: valem para todos os aparelhos e entram no desfazer.
+  const TABLE_SORTS = [["manual", "Manual (arrastar)"], ["az", "Nome A–Z"], ["za", "Nome Z–A"], ["vdesc", "Maior valor"], ["vasc", "Menor valor"], ["count", "Mais registros"]];
+  const ITEM_SORTS = [["date", "Data (dia 1 → 31)"], ["date_desc", "Data (dia 31 → 1)"], ["az", "Nome A–Z"], ["za", "Nome Z–A"], ["vdesc", "Maior valor"], ["vasc", "Menor valor"]];
+  const sortLabel = (list, v) => (list.find(([k]) => k === v) || list[0])[1];
+  const tableSortOf = (kind) => { const v = state.settings.tableSort && state.settings.tableSort[kind]; return TABLE_SORTS.some(([k]) => k === v) ? v : "manual"; };
+  const itemSortOf = (c) => ITEM_SORTS.some(([k]) => k === c.sort) ? c.sort : "date";
+  const byName = (a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base", numeric: true });
+  // empates ficam na ordem manual (tabelas) ou na data e ordem de lançamento (itens)
+  function sortedCtxs(kind) {
+    const list = ctxs(kind), mode = tableSortOf(kind);
+    if (mode === "manual") return list;
+    const tot = totalsBy(kind), cnt = new Map();
+    entries().forEach(e => { if (e.kind === kind) cnt.set(e.ctx, (cnt.get(e.ctx) || 0) + 1); });
+    const t = (c) => Math.round((tot.get(c.id) || 0) * 100), n = (c) => cnt.get(c.id) || 0;
+    const cmp = { az: (a, b) => byName(a.name, b.name), za: (a, b) => byName(b.name, a.name), vdesc: (a, b) => t(b) - t(a), vasc: (a, b) => t(a) - t(b), count: (a, b) => n(b) - n(a) }[mode];
+    return list.map((c, i) => [c, i]).sort(([a, i], [b, j]) => cmp(a, b) || i - j).map(([c]) => c);
+  }
+  function sortItems(c, items) {
+    const mid = state.selected, mode = itemSortOf(c), d = (e) => entryDay(mid, e), v = (e) => Math.round(e.value * 100);
+    const cmp = { date: (a, b) => d(a) - d(b), date_desc: (a, b) => d(b) - d(a), az: (a, b) => byName(a.name, b.name), za: (a, b) => byName(b.name, a.name),
+      vdesc: (a, b) => v(b) - v(a), vasc: (a, b) => v(a) - v(b) }[mode];
+    return items.map((e, i) => [e, i]).sort(([a, i], [b, j]) => cmp(a, b) || d(a) - d(b) || i - j).map(([e]) => e);
+  }
+  function setTableSort(kind, v) {
+    if (tableSortOf(kind) === v) return;
+    state.settings.tableSort = { ...(state.settings.tableSort || {}), [kind]: v };
+    store.saveSettings();
+    hist.label(`${kind === "income" ? "Entradas" : "Saídas"} ordenadas por ${sortLabel(TABLE_SORTS, v).toLowerCase()}`);
+    render();
+  }
+  function setItemSort(kind, id, v) {
+    const t = ctxs(kind).find(x => x.id === id);
+    if (!t || itemSortOf(t) === v) return;
+    if (v === "date") delete t.sort; else t.sort = v;      // padrão (por data) não vai para o arquivo
+    store.saveSettings();
+    hist.label(`Itens de "${t.name}" ordenados por ${sortLabel(ITEM_SORTS, v).toLowerCase()}`);
+    render();
+  }
+
   function renderBoard(kind) {
     const isIn = kind === "income";
     const board = $(isIn ? "boardIn" : "boardOut");
-    const list = ctxs(kind);
+    const list = sortedCtxs(kind);
+    const sel = $(isIn ? "tsIn" : "tsOut");
+    sel.replaceChildren(...TABLE_SORTS.map(([k, l]) => el("option", { value: k }, l)));
+    sel.value = tableSortOf(kind);
+    sel.onchange = () => setTableSort(kind, sel.value);
+    sel.parentElement.hidden = list.length < 2;
     const byCtx = totalsBy(kind);
     const total = sumMoney(byCtx.values());
     const tin = sumMoney(totalsBy("income").values());
@@ -1711,14 +1783,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   function card(kind, c, sum, base) {
     const k = colorOf(kind, c);
-    // com datas de recebimento, os registros aparecem na ordem em que caem no mês
-    const items = entries().filter(e => e.ctx === c.id).map((e, i) => [e, i])
-      .sort(([a, i], [b, j]) => entryDay(state.selected, a) - entryDay(state.selected, b) || i - j).map(([e]) => e);
+    const items = sortItems(c, entries().filter(e => e.ctx === c.id));   // padrão: na ordem em que caem no mês
     const share = base > 0 ? Math.min(sum / base * 100, 100) : 0;
     const draft = state.drafts[c.id] || { name: "", value: "" };
     const menuOpen = state.menu === c.id;
 
-    const canMove = ctxs(kind).length > 1;
+    // com a seção ordenada por nome/valor/registros, a posição é automática: sem arrastar
+    const canMove = ctxs(kind).length > 1 && tableSortOf(kind) === "manual";
+    const iSort = itemSortOf(c);
+    // ordem dos itens: seletor discreto acima da lista (só com 2 itens ou mais)
+    const sortSel = items.length > 1 ? el("label", { class: "itemsort" }, el("span", {}, el("b", { "aria-hidden": "true" }, "⇅"), "Ordenar"),
+      el("select", { "aria-label": `Ordenar os itens de ${c.name}`, onchange: (ev) => setItemSort(kind, c.id, ev.target.value) },
+        ...ITEM_SORTS.map(([k, l]) => { const o = el("option", { value: k }, l); if (k === iSort) o.selected = true; return o; }))) : null;
     const head = el("div", { class: "card-head" },
       canMove ? el("button", { class: "drag-handle", type: "button", tabindex: "-1", "aria-hidden": "true", title: "Arraste para mover", onpointerdown: (ev) => startDrag(ev, kind, c.id) }, "⠿") : el("span"),
       // os ícones ficam dentro do texto, logo depois do nome: num cartão estreito o nome quebra entre as palavras
@@ -1809,6 +1885,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       head,
       el("div", { class: "share-bar", title: `${Math.round(share)}% ${kind === "income" ? "das entradas" : "da renda"}` }, el("i", { style: `width:${share}%` })),
       menuOpen ? menu(kind, c) : null,
+      sortSel,
       rows,
       adder);
   }
@@ -1844,8 +1921,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       };
       const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); };
       n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); dIn.addEventListener("keydown", keys);
-      const li = el("li", { class: "row with-day" }, n, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"),
-        el("label", { class: "dateline" }, el("span", {}, isIn ? "Recebido em" : "Data"), dIn));
+      // nome em cima; valor e data embaixo, na mesma ordem das colunas da lista
+      const li = el("li", { class: "row with-day" }, n, v, dIn, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
       li.addEventListener("focusout", () => setTimeout(() => { if (!li.contains(document.activeElement)) commit(true); }, 0));
       requestAnimationFrame(() => {
         const f = state.edit && state.edit.field;
@@ -1856,22 +1933,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     }
     const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
     const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
-    let chip = null, check = null;
-    // registro antigo, de antes da data obrigatória: mostra o dia em que ele conta
-    if (!e.day) chip = el("span", { class: "daychip", title: "Registro antigo sem data: conta no dia em que foi lançado. Clique para escolher a data." }, dayLabel(state.selected, entryDay(state.selected, e)));
-    else if (e.kind === "income") chip = el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day));
-    else if (e.day) {
-      const st = dueState(state.selected, e);
-      // paga: mostra a data do gasto; em aberto: quando vence
-      chip = st === "paid"
-        ? el("span", { class: "daychip due-paid", title: `Paga · dia ${dayLabel(state.selected, e.day)}` }, dayLabel(state.selected, e.day))
-        : el("span", { class: `daychip due-${st}`, title: dueTitle(state.selected, e) }, dueText(state.selected, e, st));
+    // data: coluna própria depois do valor; a cor só aparece em conta vencida, vencendo hoje ou nos próximos dias
+    const mid = state.selected;
+    let check = null, dcls = "", dtitle;
+    if (!e.day) dtitle = "Registro antigo sem data: conta no dia em que foi lançado. Clique para escolher a data.";
+    else if (e.kind === "income") dtitle = (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber");
+    else {
+      const st = dueState(mid, e);
+      dcls = ` due-${st}`;
+      dtitle = st === "paid" ? `Paga · dia ${dayLabel(mid, e.day)}` : `${dueText(mid, e, st)}. ${dueTitle(mid, e)}`;
       check = el("button", { class: "paycheck", type: "button", "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
     }
+    // conta em aberto mostra o dia em que dá para pagar (vencimento adiado para o dia útil)
+    const shownDay = e.day && e.kind === "expense" && !e.paid ? dueDay(mid, Math.min(e.day, daysIn(mid))) : entryDay(mid, e);
     return el("li", { class: "row" + (check ? " has-check" : "") + (e.paid ? " is-paid" : "") }, check,
-      // clicar no selo da data abre direto o calendário do item
-      el("button", { class: "cell name", title: "Clique para editar", onclick: (ev) => open(chip && chip.contains(ev.target) ? "date" : "name") }, e.name, chip),
+      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name),
       el("button", { class: "cell val", title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
+      el("button", { class: "cell date" + dcls, title: dtitle + " · Clique para mudar a data", "aria-label": `Data de ${e.name}: ${dayLabel(mid, shownDay)}. ${dtitle}`, onclick: () => open("date") }, dayLabel(mid, shownDay)),
       el("button", { class: "iconbtn del", "aria-label": `Remover ${e.name}`, title: "Remover", onclick: () => removeEntry(e.id) }, "×"));
   }
 
@@ -1888,7 +1966,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const swatches = el("div", { class: "swatches" }, ...Array.from({ length: KCOUNT }, (_, i) =>
       el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { cur().color = i; store.saveSettings(); hist.label(`Cor da tabela "${cur().name}" trocada`); render(); } })));
     const list = ctxs(kind), pos = list.indexOf(c);
-    const position = list.length < 2 ? null : [el("span", { class: "small" }, "Posição"), el("div", { class: "pos" },
+    const position = list.length < 2 ? null : tableSortOf(kind) !== "manual"
+      ? [el("span", { class: "small" }, "Posição"), el("p", { class: "small" }, `Automática (${sortLabel(TABLE_SORTS, tableSortOf(kind))}). Para mover à mão, escolha "Manual" em Ordenar.`)]
+      : [el("span", { class: "small" }, "Posição"), el("div", { class: "pos" },
       el("button", { class: "btn", type: "button", disabled: pos === 0 || null, "aria-label": `Mover ${c.name} para antes`, onclick: () => moveCtx(kind, c.id, pos - 1) }, "← Antes"),
       el("span", { class: "pos-n num", "aria-live": "polite" }, `${pos + 1} de ${list.length}`),
       el("button", { class: "btn", type: "button", disabled: pos === list.length - 1 || null, "aria-label": `Mover ${c.name} para depois`, onclick: () => moveCtx(kind, c.id, pos + 1) }, "Depois →"))];

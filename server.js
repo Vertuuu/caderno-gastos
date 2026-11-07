@@ -16,6 +16,9 @@ const SAFETY_DIR = path.join(BACKUP_DIR, "antes-de-apagar");
 
 const SCHEMA = 1;              // versão do formato do caderno.json
 const KCOUNT = 10;             // quantidade de cores das tabelas
+// ordenações (iguais às de index.html): das tabelas em cada seção e dos itens dentro de uma tabela
+const TABLE_SORTS = ["manual", "az", "za", "vdesc", "vasc", "count"];
+const ITEM_SORTS = ["date", "date_desc", "az", "za", "vdesc", "vasc"];
 const MAX_VALUE = 1e9;         // R$ 1 bilhão por registro
 const KEEP_DAILY_DAYS = 30;    // backups diários mantidos
 const KEEP_SAFETY = 20;        // backups "antes de apagar" mantidos
@@ -223,13 +226,14 @@ function cleanSettings(b) {
   for (const k of ["expense", "income"]) {
     const list = b[k];
     if (!Array.isArray(list) || list.length > 200) return null;
-    if (!list.every(c => isObj(c) && isStr(c.id, 40) && isStr(c.name, 60) && optBool(c.repeat) &&
+    if (!list.every(c => isObj(c) && isStr(c.id, 40) && isStr(c.name, 60) && optBool(c.repeat) && (c.sort === undefined || ITEM_SORTS.includes(c.sort)) &&
       (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)) && cleanPay(c.pay) !== null)) return null;
     out[k] = list.map(c => {
       const o = { id: c.id, name: c.name };
       if (c.color !== undefined) o.color = c.color;
       if (c.repeat !== undefined) o.repeat = c.repeat;
       if (c.pay !== undefined) o.pay = cleanPay(c.pay);
+      if (c.sort !== undefined) o.sort = c.sort;      // ordem dos itens dentro da tabela
       return o;
     });
   }
@@ -244,6 +248,12 @@ function cleanSettings(b) {
   if (b.forecast !== undefined) {
     if (typeof b.forecast !== "boolean") return null;
     out.forecast = b.forecast;
+  }
+  // ordem das tabelas em cada seção (vale para todos os aparelhos)
+  if (b.tableSort !== undefined) {
+    if (!isObj(b.tableSort) || !Object.entries(b.tableSort).every(([k, v]) => (k === "income" || k === "expense") && TABLE_SORTS.includes(v))) return null;
+    out.tableSort = {};
+    for (const k of ["income", "expense"]) if (b.tableSort[k] !== undefined) out.tableSort[k] = b.tableSort[k];
   }
   return out;
 }
@@ -368,6 +378,7 @@ const server = http.createServer(async (req, res) => {
       // uma página antiga aberta em algum aparelho não conhece as regras da importação: não as apaga
       if (b.rules === undefined && data.settings.rules) b.rules = data.settings.rules;
       if (b.forecast === undefined && data.settings.forecast !== undefined) b.forecast = data.settings.forecast;
+      if (b.tableSort === undefined && data.settings.tableSort !== undefined) b.tableSort = data.settings.tableSort;
       data.settings = b;
       return send(res, 200, commit(["settings"]));
     }
