@@ -144,10 +144,9 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 ### Data dos lançamentos
 
-- Toda entrada e saída tem uma **data**. Na linha de inclusão, embaixo do nome e do valor, o campo **Data** (ou **Recebido em**) aceita qualquer dia do mês aberto.
-- **Vazio = hoje.** Num mês que não é o atual, vale o mesmo número do dia de hoje (no dia 31, um mês mais curto usa o último dia).
-- **Saída com data de hoje ou passada** já entra como **paga** e mostra a data no selo. **Saída com data futura** vira **conta a vencer**, com lembrete e bolinha de paga (veja Vencimento das contas).
-- Para mudar a data, clique no item: a data aparece embaixo do nome e do valor. Numa saída, mudar a data recalcula se está paga (passado) ou em aberto (futuro); a bolinha continua desmarcando.
+- Toda entrada e saída tem uma **data**, mostrada no selo ao lado do nome. O item novo entra com a data de **hoje**; num mês que não é o atual, com o mesmo número do dia de hoje (no dia 31, um mês mais curto usa o último dia).
+- Para mudar a data de um item, **clique no selo da data**: abre o calendário, com qualquer dia do mês aberto. Clicando no nome, a data também aparece para editar, embaixo do nome e do valor.
+- **Saída com data de hoje ou passada** fica **paga**. **Saída com data futura** vira **conta a vencer**, com lembrete e bolinha de paga (veja Vencimento das contas). Mudar a data recalcula isso; a bolinha continua desmarcando.
 - Registros antigos, lançados antes de a data existir, contam pelo dia em que foram lançados (ou no dia 1, se foram lançados em outro mês) até você editá-los.
 
 ### Datas de recebimento
@@ -156,7 +155,6 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - Cada data pode ser **"dia útil"** (o Nº dia útil do mês, contando de segunda a sexta, pulando feriados nacionais, com opção de contar o sábado) ou **"dia fixo"** (todo mês no mesmo dia, que **antecipa**, **adia** ou **mantém** quando cai em fim de semana ou feriado). Dá para ter até 6 datas, e as porcentagens precisam somar 100%.
 - No mês seguinte, os itens copiados têm o dia **recalculado**, porque o 5º dia útil muda de mês para mês.
 - O resumo do mês mostra quanto **já caiu** e qual é o **próximo recebimento**. Cada registro mostra a data e fica verde depois que ela passa.
-- Lançando com o campo de data **vazio**, o valor é dividido nas datas da tabela. Com uma **data escolhida**, entra um registro só, naquele dia.
 - Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para mudar a data de qualquer entrada clicando nela para editar.
 - O botão **Dividir os itens deste mês** aplica a divisão ao que já foi lançado antes de ligar a opção.
 
@@ -204,7 +202,8 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 - Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, pela data de cada entrada e saída. Ela responde à pergunta "o dinheiro chega até o dia 20?".
 - É **opcional** e vem **desligada**: aparece só uma faixa com o botão **Mostrar**. Para esconder de novo, use **Ocultar** no topo da seção. A escolha vale para todos os aparelhos.
-- Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**.
+- Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**. O **saldo hoje** e o **fim do mês** aparecem também no resumo do mês, no topo de Lançamentos, mesmo com a previsão oculta.
+- **Ver dia a dia:** cada dia num bloco separado, com entradas em verde e saídas em vermelho.
 - Se o saldo ficar **negativo**, um aviso mostra em quais dias e qual é o pior valor. O trecho negativo do gráfico fica em vermelho.
 - **Gráfico:** passe o mouse (ou toque) para ver o saldo de cada dia e o que entra e sai nele. Com o teclado, use as setas. **Ver dia a dia** abre a mesma informação em tabela.
 - **Saldo no início do mês:** clique em **Alterar** para informar quanto já havia na conta (aceita valor negativo, como `-150,50`). Ou use **Usar a sobra do mês anterior** para começar com o que sobrou no mês passado.
