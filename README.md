@@ -142,19 +142,28 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
 
+### Data dos lançamentos
+
+- Toda entrada e saída tem uma **data**. Na linha de inclusão, embaixo do nome e do valor, o campo **Data** (ou **Recebido em**) aceita qualquer dia do mês aberto.
+- **Vazio = hoje.** Num mês que não é o atual, vale o mesmo número do dia de hoje (no dia 31, um mês mais curto usa o último dia).
+- **Saída com data de hoje ou passada** já entra como **paga** e mostra a data no selo. **Saída com data futura** vira **conta a vencer**, com lembrete e bolinha de paga (veja Vencimento das contas).
+- Para mudar a data, clique no item: a data aparece embaixo do nome e do valor. Numa saída, mudar a data recalcula se está paga (passado) ou em aberto (futuro); a bolinha continua desmarcando.
+- Registros antigos, lançados antes de a data existir, contam pelo dia em que foram lançados (ou no dia 1, se foram lançados em outro mês) até você editá-los.
+
 ### Datas de recebimento
 
 - Nas tabelas de **entradas**, o menu ⋯ tem **Dividir em datas de recebimento**: cada valor lançado é dividido nas datas configuradas. Exemplo: salário de R$ 5.000 com 60% no **5º dia útil** e 40% **todo dia 20** vira dois registros, de R$ 3.000 e R$ 2.000, cada um com o seu dia.
 - Cada data pode ser **"dia útil"** (o Nº dia útil do mês, contando de segunda a sexta, pulando feriados nacionais, com opção de contar o sábado) ou **"dia fixo"** (todo mês no mesmo dia, que **antecipa**, **adia** ou **mantém** quando cai em fim de semana ou feriado). Dá para ter até 6 datas, e as porcentagens precisam somar 100%.
 - No mês seguinte, os itens copiados têm o dia **recalculado**, porque o 5º dia útil muda de mês para mês.
 - O resumo do mês mostra quanto **já caiu** e qual é o **próximo recebimento**. Cada registro mostra a data e fica verde depois que ela passa.
-- Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para pôr ou tirar a data de qualquer entrada clicando nela para editar.
+- Lançando com o campo de data **vazio**, o valor é dividido nas datas da tabela. Com uma **data escolhida**, entra um registro só, naquele dia.
+- Para não dividir mais, **desligue a opção**: os registros já lançados mantêm as datas. Também dá para mudar a data de qualquer entrada clicando nela para editar.
 - O botão **Dividir os itens deste mês** aplica a divisão ao que já foi lançado antes de ligar a opção.
 
 ### Vencimento das contas
 
-- Em qualquer **saída**, clique no item e preencha o campo **venc.** com o dia em que a conta vence todo mês (ex.: Aluguel dia 5). Deixe vazio para tirar o vencimento.
-- A conta ganha uma **bolinha para marcar como paga** e um selo com a situação: **venceu**, **vence hoje**, **vence amanhã / em N dias** (até 3 dias antes), **vence dd/mm** ou **paga**. Os itens aparecem na ordem de vencimento.
+- Uma **saída com data futura** é uma conta a vencer naquele dia (ex.: Aluguel dia 5, lançado no dia 1). Ao criar o mês seguinte, ela repete no mesmo dia.
+- A saída tem uma **bolinha para marcar como paga** e um selo com a situação: **venceu**, **vence hoje**, **vence amanhã / em N dias** (até 3 dias antes), **vence dd/mm** ou, quando paga, a **data**. Os itens aparecem na ordem da data.
 - Se o vencimento cai em **fim de semana ou feriado**, vale o próximo dia útil, como num boleto (passe o mouse no selo para ver).
 - No mês atual, uma **faixa no topo** lista as contas vencidas e as que vencem nos próximos dias, com o botão **✓ Paga**. O resumo mostra quanto ainda falta **pagar** e quantas estão **vencidas**.
 - Ao criar o mês seguinte, as contas copiadas mantêm o dia do vencimento e voltam a ficar **em aberto**.
@@ -193,15 +202,15 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 ### Previsão do saldo
 
-- Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, usando as datas de recebimento e de vencimento. Ela responde à pergunta "o dinheiro chega até o dia 20?".
+- Em **Lançamentos**, a seção **Previsão do saldo** mostra como o dinheiro anda dia a dia no mês, pela data de cada entrada e saída. Ela responde à pergunta "o dinheiro chega até o dia 20?".
 - É **opcional** e vem **desligada**: aparece só uma faixa com o botão **Mostrar**. Para esconder de novo, use **Ocultar** no topo da seção. A escolha vale para todos os aparelhos.
 - Três números aparecem no topo: **saldo hoje** (ou o início do mês, quando não é o mês atual), **menor saldo** do mês com o dia em que ele acontece, e **fim do mês**.
 - Se o saldo ficar **negativo**, um aviso mostra em quais dias e qual é o pior valor. O trecho negativo do gráfico fica em vermelho.
 - **Gráfico:** passe o mouse (ou toque) para ver o saldo de cada dia e o que entra e sai nele. Com o teclado, use as setas. **Ver dia a dia** abre a mesma informação em tabela.
 - **Saldo no início do mês:** clique em **Alterar** para informar quanto já havia na conta (aceita valor negativo, como `-150,50`). Ou use **Usar a sobra do mês anterior** para começar com o que sobrou no mês passado.
 - **Regras usadas:**
-  - Entradas sem data contam no dia 1.
-  - Gastos sem data (Comida, Uber…) são espalhados igualmente pelo mês.
+  - Cada entrada e saída conta no dia dela; nada é espalhado pelo mês. Conta em aberto conta no vencimento (no próximo dia útil, se cair em fim de semana ou feriado).
+  - Registros antigos sem data contam no dia em que foram lançados (ou no dia 1).
   - No mês atual, conta vencida e não paga é contada como saindo hoje.
   - Conta paga antes do vencimento também é contada como saindo hoje.
 

@@ -216,8 +216,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .row .del:hover { background: var(--spend-soft); color: var(--spend); }
 .row input { border: 1px solid var(--focus); border-radius: 7px; padding: 6px 9px; background: var(--surface); width: 100%; min-width: 0; }
 .row input.val { text-align: right; font-family: var(--f-num); width: 112px; }
-.row.with-day { grid-template-columns: minmax(0, 1fr) 62px auto 30px; }
-.row input.day { width: 62px; text-align: center; font-family: var(--f-num); }
+.row.with-day { padding-block: 6px; row-gap: 4px; }
+/* linha da data: na edição e na inclusão, embaixo de nome e valor */
+.dateline { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 12.5px; color: var(--muted); }
+.dateline > span:first-child { font-weight: 600; }
+.dateline input.date { width: auto; min-width: 0; padding: 4px 8px; font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); color-scheme: light dark; }
+.dateline .small { font-size: 12px; }
 .daychip { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-family: var(--f-num); font-variant-numeric: tabular-nums; color: var(--muted); border: 1px solid var(--line); vertical-align: 1px; white-space: nowrap; }
 .daychip.paid { color: var(--earn); border-color: color-mix(in srgb, var(--earn) 45%, transparent); background: var(--earn-soft); }
 .card-title .paybadge { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; }
@@ -331,7 +335,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .instopts select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
 @media (max-width: 640px) {
   /* no celular, campos com letra igual à dos outros campos (menor que isso, o iPhone dá zoom ao tocar) */
-  .adder .instopts input, .instopts select, .payline select, .menu .payline input, .imp-table select, .imp-addrule input, .imp-addrule select { font-size: 15px; }
+  .dateline input.date, .adder .instopts input, .instopts select, .payline select, .menu .payline input, .imp-table select, .imp-addrule input, .imp-addrule select { font-size: 15px; }
 }
 .instprev { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); font-family: var(--f-num); }
 .instlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
@@ -1134,6 +1138,27 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // dia limitado ao tamanho do mês (um "dia 31" cai no dia 30 ou no último dia de fevereiro)
   const dayLabel = (monthId, day) => `${pad2(Math.min(day, daysIn(monthId)))}/${monthId.slice(5)}`;
 
+  // ---------- Data dos lançamentos ----------
+  // Todo lançamento tem um dia no mês ("day"). Sem data escolhida vale hoje; fora do mês atual, o mesmo
+  // número do dia de hoje no mês aberto (limitado ao último dia: dia 31 vira 28/29/30).
+  const defaultDay = (monthId) => Math.min(new Date().getDate(), daysIn(monthId));
+  const dateOf = (monthId, day) => `${monthId}-${pad2(Math.min(day, daysIn(monthId)))}`;   // valor do <input type="date">
+  const monthBounds = (monthId) => ({ min: dateOf(monthId, 1), max: dateOf(monthId, 31) });
+  // "AAAA-MM-DD" do mês aberto -> dia (ou null se vazio/fora do mês)
+  const dayFromDate = (monthId, v) => (v && v.slice(0, 7) === monthId ? Number(v.slice(8)) || null : null);
+  // o dia já passou (ou é hoje)? mês passado: sim; mês futuro: não
+  const isPastDay = (monthId, day) => { const cur = currentMonthId(); return monthId < cur || (monthId === cur && Math.min(day, daysIn(monthId)) <= new Date().getDate()); };
+  // dia em que o registro conta no mês. Registros antigos, de antes da data obrigatória, usam o dia em que
+  // foram lançados (at) se for nesse mês; senão o dia 1. Não muda o que está salvo.
+  function entryDay(monthId, e) {
+    const last = daysIn(monthId);
+    if (e.day) return Math.min(e.day, last);
+    if (e.at) { const d = new Date(e.at); if (`${d.getFullYear()}-${pad2(d.getMonth() + 1)}` === monthId) return d.getDate(); }
+    return 1;
+  }
+  // campo de data limitado ao mês aberto
+  const dateInput = (monthId, attrs) => el("input", { type: "date", class: "date", ...monthBounds(monthId), ...attrs });
+
   // ---------- Compras parceladas ----------
   // Uma compra (state.plans) vira um registro por mês: "Nome (k/n)", com { inst: { plan, k } }. As parcelas são
   // escritas nos meses que já existem e, nos que ainda não existem, quando o mês for criado. A diferença dos
@@ -1385,7 +1410,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   // ---------- Previsão do saldo ----------
   // Saldo dia a dia no mês: começa no saldo inicial do mês (opcional) e soma/subtrai cada registro no dia dele.
-  // Entradas sem data contam no dia 1; gastos sem data (Comida, Uber…) são espalhados igualmente pelos dias.
+  // Cada registro conta no dia dele (entryDay); conta em aberto, no vencimento. Nada é espalhado pelo mês.
   // No mês atual, conta em aberto já vencida sai "hoje" e conta paga antes do vencimento também.
   const WEEK = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const weekday = (monthId, d) => { const [y, m] = monthId.split("-").map(Number); return WEEK[new Date(y, m - 1, d).getDay()]; };
@@ -1399,33 +1424,29 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const m = state.months[mid], last = daysIn(mid), cur = currentMonthId();
     const today = mid === cur ? new Date().getDate() : null;
     const delta = new Array(last + 1).fill(0), events = Array.from({ length: last + 1 }, () => []);
-    let loose = 0, dated = 0;
+    let undated = 0;     // registros antigos, de antes da data obrigatória
     for (const e of m.entries) {
       const c = Math.round(e.value * 100);
+      if (!e.day) undated++;
       if (e.kind === "income") {
-        const d = Math.min(e.day || 1, last);
-        delta[d] += c; events[d].push({ name: e.name, value: e.value, sign: 1, guess: !e.day });
-        if (e.day) dated++;
-      } else if (e.day) {
-        let d = dueDay(mid, Math.min(e.day, last));
-        if (today && ((e.paid && d > today) || (!e.paid && d < today))) d = today;
+        const d = entryDay(mid, e);
+        delta[d] += c; events[d].push({ name: e.name, value: e.value, sign: 1 });
+      } else {
+        // conta em aberto: no vencimento (adiado para o dia útil); paga: no dia do gasto.
+        // Registro antigo sem dia não é conta: já aconteceu, fica no dia em que foi lançado.
+        let d = e.day && !e.paid ? dueDay(mid, Math.min(e.day, last)) : entryDay(mid, e);
+        if (today && e.day && ((e.paid && d > today) || (!e.paid && d < today))) d = today;
         delta[d] -= c; events[d].push({ name: e.name, value: e.value, sign: -1, paid: !!e.paid });
-        dated++;
-      } else loose += c;
-    }
-    const spread = [];
-    for (let d = 1; d <= last; d++) {
-      const s = Math.round(loose * d / last) - Math.round(loose * (d - 1) / last);
-      spread[d] = s / 100; delta[d] -= s;
+      }
     }
     const opening = (m.opening || 0);
     let bal = Math.round(opening * 100);
     const days = [];
-    for (let d = 1; d <= last; d++) { bal += delta[d]; days.push({ d, bal: bal / 100, events: events[d], spread: spread[d] }); }
+    for (let d = 1; d <= last; d++) { bal += delta[d]; days.push({ d, bal: bal / 100, events: events[d] }); }
     const min = days.reduce((a, b) => b.bal < a.bal ? b : a, days[0]);
     const neg = [];      // trechos com saldo negativo [início, fim]
     days.forEach(x => { if (x.bal < 0) { const r = neg[neg.length - 1]; if (r && r[1] === x.d - 1) r[1] = x.d; else neg.push([x.d, x.d]); } });
-    return { mid, last, today, opening, days, min, end: days[last - 1].bal, neg, loose: loose / 100, dated };
+    return { mid, last, today, opening, days, min, end: days[last - 1].bal, neg, undated };
   }
 
   const BRLc = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
@@ -1445,7 +1466,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (!on) {
       box.replaceChildren(el("div", { class: "fc-head" },
         el("h2", { id: "fcTitle" }, "Previsão do saldo"),
-        el("span", { class: "small" }, "Saldo dia a dia, com as datas de recebimento e os vencimentos"),
+        el("span", { class: "small" }, "Saldo dia a dia, pela data de cada entrada e saída"),
         el("button", { class: "btn fc-toggle", type: "button", onclick: () => setForecastOn(true) }, "Mostrar")));
       return;
     }
@@ -1494,14 +1515,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     }
 
     const chart = el("div", { class: "fc-chart" });
-    const note = !f.dated
-      ? el("p", { class: "small" }, "Dica: defina o dia das entradas e o vencimento das contas para a previsão ficar exata. Sem data, as entradas contam no dia 1 e os gastos são espalhados pelo mês.")
-      : f.loose > 0 ? el("p", { class: "small" }, `Gastos sem data (${fmt(f.loose)}) foram espalhados pelo mês, cerca de ${fmt(f.loose / f.last)} por dia.`) : null;
+    const note = f.undated
+      ? el("p", { class: "small" }, f.undated === 1
+        ? "1 registro antigo sem data conta no dia em que foi lançado (ou no dia 1, se foi lançado em outro mês). Clique nele para escolher a data."
+        : `${f.undated} registros antigos sem data contam no dia em que foram lançados (ou no dia 1, se foram lançados em outro mês). Clique neles para escolher a data.`)
+      : null;
 
     // tabela dia a dia (também é a versão em texto do gráfico)
     const rowsT = f.days.filter(x => x.events.length || x.d === f.today || x.d === f.min.d).map(x => el("tr", { class: (x.d === f.today ? "is-today " : "") + (x.bal < 0 ? "is-neg" : "") },
       el("th", { scope: "row" }, `${weekday(mid, x.d)} ${dayLabel(mid, x.d)}`, x.d === f.today ? el("small", {}, " hoje") : null),
-      el("td", {}, el("div", { class: "fc-evs" }, x.events.length ? x.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}` + (ev.paid ? " (paga)" : ""))) : el("span", { class: "small" }, "sem movimento com data"))),
+      el("td", {}, el("div", { class: "fc-evs" }, x.events.length ? x.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}`)) : el("span", { class: "small" }, "sem movimento"))),
       el("td", { class: "num" }, fmtBal(x.bal))));
     const table = el("details", { class: "fc-table" }, el("summary", {}, "Ver dia a dia"),
       el("table", {}, el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Dia"), el("th", { scope: "col" }, "Movimentos"), el("th", { scope: "col", class: "num" }, "Saldo"))), el("tbody", {}, ...rowsT)));
@@ -1595,8 +1618,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
       hot.setAttribute("cx", px); hot.setAttribute("cy", py); hot.setAttribute("class", "fc-dot" + (r.bal < 0 ? " neg" : "")); hot.setAttribute("visibility", "visible");
       tip.replaceChildren(el("b", {}, `${weekday(f.mid, d)}, ${dayLabel(f.mid, d)}`), el("span", {}, "Saldo: ", el("b", { class: "num" + (r.bal < 0 ? " neg" : "") }, fmtBal(r.bal))),
-        ...r.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}`)),
-        r.spread ? el("span", { class: "fc-ev out" }, `${signed(-r.spread)} gastos sem data`) : null);
+        ...r.events.map(ev => el("span", { class: "fc-ev " + (ev.sign > 0 ? "in" : "out") }, `${signed(ev.sign * ev.value)} ${ev.name}`)));
       tip.hidden = false;
       const tw = tip.offsetWidth || 180;
       tip.style.left = Math.min(Math.max(0, px - tw / 2), W - tw) + "px";
@@ -1673,7 +1695,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const k = colorOf(kind, c);
     // com datas de recebimento, os registros aparecem na ordem em que caem no mês
     const items = entries().filter(e => e.ctx === c.id).map((e, i) => [e, i])
-      .sort(([a, i], [b, j]) => (a.day || 99) - (b.day || 99) || i - j).map(([e]) => e);
+      .sort(([a, i], [b, j]) => entryDay(state.selected, a) - entryDay(state.selected, b) || i - j).map(([e]) => e);
     const share = base > 0 ? Math.min(sum / base * 100, 100) : 0;
     const draft = state.drafts[c.id] || { name: "", value: "" };
     const menuOpen = state.menu === c.id;
@@ -1699,8 +1721,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
     const err = el("p", { class: "adder-err", hidden: true });
-    const sync = () => { state.drafts[c.id] = { name: nameIn.value, value: valIn.value }; };
-    nameIn.addEventListener("input", sync); valIn.addEventListener("input", sync);
+    // data do lançamento: qualquer dia do mês aberto; vazio = hoje (ou o mesmo dia em outro mês)
+    const mid = state.selected, dd = defaultDay(mid);
+    const dateIn = dateInput(mid, { value: draft.date && dayFromDate(mid, draft.date) ? draft.date : "", "aria-label": `Data do item em ${c.name}`,
+      title: splitN ? "Vazio: divide nas datas da tabela" : `Vazio: ${dayLabel(mid, dd)}` });
+    const sync = () => { state.drafts[c.id] = { name: nameIn.value, value: valIn.value, date: dateIn.value }; };
+    nameIn.addEventListener("input", sync); valIn.addEventListener("input", sync); dateIn.addEventListener("input", sync);
+    const dateLine = el("label", { class: "dateline" }, el("span", {}, kind === "income" ? "Recebido em" : "Data"), dateIn,
+      el("span", { class: "small" }, splitN ? "vazio: nas datas da tabela" : `vazio: ${mid === currentMonthId() ? "hoje" : "dia " + pad2(dd)}`));
     nameIn.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !valIn.value) { ev.preventDefault(); valIn.focus(); } });
     // "Parcelar no cartão" (só nas saídas): o valor digitado vira o total da compra
     const inst = kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? state.instDraft : null;
@@ -1753,14 +1781,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         showToast(`"${name}" em ${n}x de ${fmt(instValue(p, 2))}` + (p.first !== state.selected ? `, a partir de ${monthLabel(p.first)}` : ""), 8000);
         return;
       }
-      const added = splitEntry(state.selected, c, { id: uid(), kind, ctx: c.id, name, value, at: Date.now() });
+      const picked = dayFromDate(state.selected, dateIn.value);
+      const base = { id: uid(), kind, ctx: c.id, name, value, at: Date.now(), day: picked || defaultDay(state.selected) };
+      if (kind === "expense" && isPastDay(state.selected, base.day)) base.paid = true;   // já aconteceu: não vira conta a vencer
+      // data escolhida à mão: um registro só naquele dia; vazia: divide nas datas da tabela (se ela divide)
+      const added = picked ? [base] : splitEntry(state.selected, c, base);
       state.months[state.selected].entries.push(...added);
       delete state.drafts[c.id];
       store.saveMonth(state.selected);
       hist.label(`"${name}" adicionado em ${c.name}` + (added.length > 1 ? `, dividido em ${added.length} datas` : ""));
       state.focusAdder = c.id;
       render();
-    } }, nameIn, valIn, addBtn, err, instBox);
+    } }, nameIn, valIn, addBtn, err, inst ? null : dateLine, instBox);
 
     return el("article", { class: "card", "data-id": c.id, style: `--k:${k}` },
       head,
@@ -1775,22 +1807,24 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (editing) {
       const n = el("input", { type: "text", value: e.name, maxlength: "120", "aria-label": "Nome" });
       const v = el("input", { class: "val", inputmode: "decimal", value: fmtPlain(e.value), "aria-label": "Valor" });
-      // entradas têm o dia em que caem (vazio = sem data)
-      // nas saídas, o dia do vencimento
-      const isIn = e.kind === "income";
-      const dIn = el("input", { class: "day", type: "number", min: "1", max: "31", inputmode: "numeric", placeholder: isIn ? "dia" : "venc.", value: e.day ? String(e.day) : "",
-        "aria-label": isIn ? "Dia do recebimento" : "Dia do vencimento", title: isIn ? "Dia em que o dinheiro cai (vazio = sem data)" : "Dia em que a conta vence, todo mês (vazio = sem vencimento)" });
+      // data do lançamento (entradas: dia em que o dinheiro cai; saídas: dia do gasto ou do vencimento)
+      const isIn = e.kind === "income", mid = state.selected;
+      const shown = dateOf(mid, entryDay(mid, e));      // registro antigo sem dia: mostra o dia em que foi lançado
+      const dIn = dateInput(mid, { value: shown, "aria-label": isIn ? "Data do recebimento" : "Data do gasto ou vencimento",
+        title: isIn ? "Dia em que o dinheiro cai (vazio = hoje)" : "Dia do gasto; data futura vira conta a vencer (vazio = hoje)" });
       let done = false;
       const commit = (save) => {
         if (done) return; done = true;
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
-          let day = t ? t.day : undefined;
-          // 1 a 31: num mês mais curto o dia 31 vale como o último dia (e volta a ser 31 nos meses que têm)
-          if (dIn) { const dv = parseInt(dIn.value, 10); day = dv >= 1 && dv <= 31 ? dv : undefined; }
+          // data não mexida: mantém o dia salvo (um vencimento no dia 31 continua 31 num mês mais curto)
+          const day = dIn.value === shown && t ? t.day || entryDay(mid, t) : dayFromDate(mid, dIn.value) || defaultDay(mid);
           if (t && name && value > 0 && (name !== t.name || value !== t.value || day !== t.day)) {
-            if (day !== t.day) { delete t.part; if (day) t.day = day; else { delete t.day; delete t.paid; } }   // dia escolhido à mão deixa de seguir a regra
+            if (day !== t.day) {
+              delete t.part; t.day = day;                  // dia escolhido à mão deixa de seguir a regra
+              if (!isIn) { if (isPastDay(mid, day)) t.paid = true; else delete t.paid; }   // passado = pago, futuro = em aberto
+            }
             t.name = name; t.value = value;
             store.saveMonth(state.selected); hist.label(`"${name}" editado`);
           }
@@ -1798,8 +1832,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         state.edit = null; render();
       };
       const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); };
-      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); if (dIn) dIn.addEventListener("keydown", keys);
-      const li = el("li", { class: "row" + (dIn ? " with-day" : "") }, n, dIn, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
+      n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); dIn.addEventListener("keydown", keys);
+      const li = el("li", { class: "row with-day" }, n, v, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"),
+        el("label", { class: "dateline" }, el("span", {}, isIn ? "Recebido em" : "Data"), dIn));
       li.addEventListener("focusout", () => setTimeout(() => { if (!li.contains(document.activeElement)) commit(true); }, 0));
       requestAnimationFrame(() => { const t = state.edit && state.edit.field === "value" ? v : n; t.focus(); t.select(); });
       return li;
@@ -1807,10 +1842,15 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
     const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
     let chip = null, check = null;
-    if (e.day && e.kind === "income") chip = el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day));
+    // registro antigo, de antes da data obrigatória: mostra o dia em que ele conta
+    if (!e.day) chip = el("span", { class: "daychip", title: "Registro antigo sem data: conta no dia em que foi lançado. Clique para escolher a data." }, dayLabel(state.selected, entryDay(state.selected, e)));
+    else if (e.kind === "income") chip = el("span", { class: "daychip" + (isPaid(e) ? " paid" : ""), title: (part ? partLabel(part) + " · " : "") + (isPaid(e) ? "já caiu" : "a receber") }, dayLabel(state.selected, e.day));
     else if (e.day) {
       const st = dueState(state.selected, e);
-      chip = el("span", { class: `daychip due-${st}`, title: dueTitle(state.selected, e) }, dueText(state.selected, e, st));
+      // paga: mostra a data do gasto; em aberto: quando vence
+      chip = st === "paid"
+        ? el("span", { class: "daychip due-paid", title: `Paga · dia ${dayLabel(state.selected, e.day)}` }, dayLabel(state.selected, e.day))
+        : el("span", { class: `daychip due-${st}`, title: dueTitle(state.selected, e) }, dueText(state.selected, e, st));
       check = el("button", { class: "paycheck", type: "button", "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
     }
     return el("li", { class: "row" + (check ? " has-check" : "") + (e.paid ? " is-paid" : "") }, check,
