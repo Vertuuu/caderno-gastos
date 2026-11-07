@@ -426,6 +426,10 @@ const server = http.createServer(async (req, res) => {
       for (const mid of touched) out.docs["m:" + mid] = data.months[mid];
       return send(res, 200, out);
     }
+    // Resposta curta para o painel saber que o servidor está vivo (sem baixar o caderno inteiro)
+    if (p === "/api/health" && req.method === "GET") {
+      return send(res, 200, { app: "caderno-gastos", schema: SCHEMA, pid: process.pid, rev: data.rev });
+    }
     // Desligamento pedido pelo app de controle (só aceito do próprio computador)
     if (p === "/api/shutdown" && req.method === "POST") {
       const ip = req.socket.remoteAddress || "";
