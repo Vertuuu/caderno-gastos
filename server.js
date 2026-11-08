@@ -316,11 +316,37 @@ function cleanPlans(b) {
 }
 
 // ---------- HTTP ----------
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2" };
+
+// Cabeçalhos de segurança em toda resposta. "unsafe-inline" porque o app tem script e estilos dentro do HTML;
+// o resto fica restrito ao próprio servidor (nada é carregado de fora, nem dá para abrir o app dentro de outro site).
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "X-Frame-Options": "DENY",
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+    "font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+};
 
 function send(res, status, body, type = "application/json; charset=utf-8") {
-  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
+  res.writeHead(status, { ...SECURITY_HEADERS, "Content-Type": type, "Cache-Control": "no-store" });
   res.end(typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body));
+}
+
+// Proteção contra "DNS rebinding": um site de fora poderia apontar o próprio domínio para este computador e
+// ler/alterar os dados pelo navegador. Só atende quando o endereço digitado é localhost, um IP (como o
+// 192.168.x.x do celular) ou o nome deste computador.
+const HOSTNAMES = new Set(["localhost", os.hostname().toLowerCase()].flatMap(h => [h, h + ".local", h + ".lan", h + ".home"]));
+function hostAllowed(hostHeader) {
+  if (!hostHeader) return false;
+  let h = String(hostHeader).trim().toLowerCase();
+  if (h.startsWith("[")) return /^\[[0-9a-f:.]+\](:\d+)?$/.test(h);            // IPv6 literal, como [::1]:3000
+  h = h.replace(/:\d+$/, "").replace(/\.$/, "");
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return true;                         // IPv4
+  // nome do computador no Tailscale (MagicDNS), como meu-pc.tail1234.ts.net
+  const tailscale = h.endsWith(".ts.net") && h.split(".")[0] === os.hostname().toLowerCase();
+  return HOSTNAMES.has(h) || h.endsWith(".localhost") || tailscale;
 }
 
 function readBody(req) {
@@ -361,6 +387,7 @@ function diskBlocked(res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (!hostAllowed(req.headers.host)) return send(res, 421, "Endereço não reconhecido. Abra pelo localhost ou pelo IP deste computador.", "text/plain; charset=utf-8");
   const url = new URL(req.url, "http://x");
   const p = url.pathname;
   try {
@@ -441,10 +468,12 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/health" && req.method === "GET") {
       return send(res, 200, { app: "caderno-gastos", schema: SCHEMA, pid: process.pid, rev: data.rev });
     }
-    // Desligamento pedido pelo app de controle (só aceito do próprio computador)
+    // Desligamento pedido pelo painel: só do próprio computador e com o cabeçalho do painel. Uma página
+    // aberta no navegador não consegue mandar esse cabeçalho (o servidor não libera CORS), então um site
+    // malicioso não desliga o app.
     if (p === "/api/shutdown" && req.method === "POST") {
       const ip = req.socket.remoteAddress || "";
-      if (!/^(::1|127\.|::ffff:127\.)/.test(ip)) return send(res, 403, { error: "Proibido" });
+      if (!/^(::1|127\.|::ffff:127\.)/.test(ip) || req.headers["x-caderno-painel"] !== "1") return send(res, 403, { error: "Proibido" });
       send(res, 200, { ok: true });
       return setTimeout(() => flushAndExit(0), 50);
     }
@@ -453,7 +482,9 @@ const server = http.createServer(async (req, res) => {
     // arquivos estáticos
     if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, { error: "Método não permitido" });
     const file = path.normalize(path.join(PUBLIC, p === "/" ? "index.html" : decodeURIComponent(p)));
-    if (!file.startsWith(PUBLIC)) return send(res, 403, "Proibido", "text/plain");
+    // dentro de public/ de verdade (um simples startsWith deixaria passar uma pasta "public2" ao lado)
+    const rel = path.relative(PUBLIC, file);
+    if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return send(res, 403, "Proibido", "text/plain; charset=utf-8");
     fs.readFile(file, (err, buf) => {
       if (err) return send(res, 404, "Não encontrado", "text/plain; charset=utf-8");
       send(res, 200, buf, TYPES[path.extname(file)] || "application/octet-stream");

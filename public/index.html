@@ -9,9 +9,8 @@
   // aplica o tema salvo antes de desenhar a página, para não piscar
   try { const t = localStorage.getItem("caderno-tema"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<!-- fontes servidas pelo próprio app: funciona sem internet -->
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="graficos.css">
 <link rel="stylesheet" href="metas.css">
 <style>
