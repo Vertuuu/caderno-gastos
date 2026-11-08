@@ -22,7 +22,7 @@
   --sunk: #f4f6fa;
   --ink: #141a2b;
   --muted: #586179;
-  --faint: #8a92a6;
+  --faint: #646c80;      /* texto fraco ainda legível: >= 4,5:1 no fundo claro */
   --line: #d3d9e6;
   --hair: #e6e9f1;
   --brand: #17223f;
@@ -33,7 +33,7 @@
   --spend: #d03b2a;
   --spend-soft: #fbe2dd;
   --warn: #a35f00; --warn-soft: #fbedd3;
-  --k0: #17855a; --k1: #d03b2a; --k2: #2f5bd3; --k3: #b86a00; --k4: #8a3fc7; --k5: #0b8287; --k6: #a34d22; --k7: #577a12; --k8: #c4256f; --k9: #4a5670;
+  --k0: #17855a; --k1: #d03b2a; --k2: #2f5bd3; --k3: #9c5a00; --k4: #8a3fc7; --k5: #0b8287; --k6: #a34d22; --k7: #577a12; --k8: #c4256f; --k9: #4a5670;
   /* cartões: cabeçalho sólido na cor do contexto */
   --head-mix: 100%;
   --head-ink: #ffffff;
@@ -48,7 +48,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
+    --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #8a93a9;
     --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
     --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
     --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
@@ -58,7 +58,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #6b7389;
+  --bg: #0e1220; --surface: #171c2c; --sunk: #121726; --ink: #e6e9f3; --muted: #9ca5bb; --faint: #8a93a9;
   --line: #283049; --hair: #1f2638; --brand: #0a0f1e; --brand-ink: #e6e9f3; --focus: #86a5ff;
   --earn: #5fd39a; --earn-soft: #14301f; --spend: #ff8a72; --spend-soft: #3b1d18; --warn: #f2b45a; --warn-soft: #3a2a10;
   --k0: #5fd39a; --k1: #ff8a72; --k2: #86a5ff; --k3: #f2b544; --k4: #c39bff; --k5: #4fd1d3; --k6: #e8a17a; --k7: #b3d36a; --k8: #ff8cc0; --k9: #a9b4c9;
@@ -180,7 +180,7 @@ main .inner { padding-block: 22px 96px; display: grid; gap: 30px; }
 .card-title i { width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); flex: none; }
 .card-total { font-family: var(--f-num); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--k) var(--total-k), var(--head-ink)); white-space: nowrap; }
 .card-head .iconbtn { color: var(--head-ink); opacity: .85; }
-.card-head .iconbtn.trash { margin-right: -6px; opacity: .6; }
+.card-head .iconbtn.trash { margin-right: -6px; opacity: .75; }
 .card-head .iconbtn .ico { display: grid; place-items: center; }
 .card-head .iconbtn:hover { opacity: 1; background: color-mix(in srgb, var(--head-ink) 18%, transparent); color: var(--head-ink); }
 .iconbtn { width: 30px; height: 30px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; font-size: 17px; line-height: 1; flex: none; }
@@ -203,7 +203,7 @@ main .inner { padding-block: 22px 96px; display: grid; gap: 30px; }
 .card.orphan .card-title i { background: var(--faint); }
 .card.orphan .card-total { color: var(--ink); }
 .orphan-note { margin: 0; padding: 8px 14px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--hair); }
-.drag-handle { width: 22px; height: 30px; margin-right: -4px; border: 0; border-radius: 6px; background: transparent; color: var(--head-ink); opacity: .45; font-size: 16px; line-height: 1; padding: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag-handle { width: 22px; height: 30px; margin-right: -4px; border: 0; border-radius: 6px; background: transparent; color: var(--head-ink); opacity: .7; font-size: 16px; line-height: 1; padding: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .drag-handle:hover { opacity: .9; background: color-mix(in srgb, var(--head-ink) 14%, transparent); }
 .card-head > span:first-child { width: 8px; }
 .card.dragging { background: transparent; border: 2px dashed color-mix(in srgb, var(--k) 70%, var(--line)); box-shadow: none; }
@@ -225,7 +225,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .cell:hover { background: color-mix(in srgb, var(--k) 10%, transparent); }
 .row .del { opacity: 0; }
 .row:hover .del, .row:focus-within .del { opacity: 1; }
-@media (hover: none) { .row .del { opacity: .55; } }
+@media (hover: none) { .row .del { opacity: .7; } }
 .row .del:hover { background: var(--spend-soft); color: var(--spend); }
 .row input { border: 1px solid var(--focus); border-radius: 7px; padding: 6px 9px; background: var(--surface); width: 100%; min-width: 0; }
 .row input.val { text-align: right; font-family: var(--f-num); width: 112px; }
@@ -449,7 +449,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .adder input.val { text-align: right; font-family: var(--f-num); }
 .adder button { border: 0; border-radius: 8px; background: var(--k); color: color-mix(in srgb, var(--surface) var(--total-k), #fff); font-size: 18px; font-weight: 600; line-height: 1; }
 .adder button:disabled { opacity: .35; cursor: default; }
-.adder-err { grid-column: 1 / -1; font-size: 12.5px; color: var(--spend); margin: 0 2px; }
+.adder-err, .row-err, .menu .err { grid-column: 1 / -1; font-size: 12.5px; color: var(--spend); margin: 0 2px; }
 
 .newcard { border: 1.5px dashed var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; align-content: start; min-height: 120px; background: transparent; }
 .newcard .ttl { font-weight: 600; color: var(--muted); }
@@ -589,7 +589,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   .mobilebar .monthnav .arrow { width: 28px; height: 42px; }
   .mobilebar .monthpick select { font-size: 15px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+/* tela de toque: botões pequenos ganham área de toque invisível de 40px, sem mudar o desenho */
+@media (pointer: coarse) {
+  .iconbtn, .paycheck, .drag-handle, .swatch, .monthnav .arrow { position: relative; }
+  .iconbtn::after, .paycheck::after, .drag-handle::after, .swatch::after, .monthnav .arrow::after { content: ""; position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); }
+}
 </style>
 </head>
 <body>
@@ -1264,7 +1269,51 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
 
   // ---------- Render ----------
+  // ---------- Foco depois de redesenhar ----------
+  // O render troca os elementos da página; sem isso, marcar paga, trocar a cor, ordenar etc. jogavam o foco
+  // do teclado (e do leitor de tela) para o topo. Guarda uma "assinatura" do elemento focado e devolve o foco
+  // ao equivalente novo.
+  function focusKey(node) {
+    if (!node || node === document.body || !document.contains(node) || node.closest("dialog")) return null;
+    if (node.id) return "#" + node.id;
+    const scope = node.closest("[data-id], [data-ctx]");
+    const where = scope ? (scope.dataset.id || scope.dataset.ctx) : "";
+    const what = node.dataset.focus || node.getAttribute("aria-label") || node.getAttribute("title") || node.textContent.trim().slice(0, 40);
+    return what ? `${node.tagName}|${where}|${what}` : null;
+  }
+  function findByKey(key) {
+    if (key.startsWith("#")) return document.getElementById(key.slice(1));
+    const [tag, where, what] = key.split("|");
+    return [...document.querySelectorAll(tag)].find(n => {
+      const scope = n.closest("[data-id], [data-ctx]");
+      return (scope ? (scope.dataset.id || scope.dataset.ctx) : "") === where &&
+        (n.dataset.focus || n.getAttribute("aria-label") || n.getAttribute("title") || n.textContent.trim().slice(0, 40)) === what;
+    }) || null;
+  }
+  // mouse/dedo pressionado agora? (para esperar o clique terminar antes de redesenhar)
+  let pointerIsDown = false;
+  document.addEventListener("pointerdown", () => { pointerIsDown = true; }, true);
+  ["pointerup", "pointercancel"].forEach(t => document.addEventListener(t, () => { pointerIsDown = false; }, true));
+  function afterPointer(fn) {
+    const once = () => { document.removeEventListener("pointerup", once, true); document.removeEventListener("pointercancel", once, true); fn(); };
+    document.addEventListener("pointerup", once, true); document.addEventListener("pointercancel", once, true);
+  }
+  // foco pedido por quem desenhou (ex.: campo da edição), dado na hora: o iPhone só abre o teclado
+  // se o foco vier dentro do próprio toque, e não num requestAnimationFrame depois
+  let focusAfterRender = null;
   function render() {
+    const before = document.activeElement, key = focusKey(before);
+    const caret = before && typeof before.selectionStart === "number" ? [before.selectionStart, before.selectionEnd] : null;
+    renderView();
+    const want = focusAfterRender; focusAfterRender = null;
+    if (want) { want(); return; }
+    if (!key || document.contains(before)) return;   // o elemento focado continua na página: nada a fazer
+    const again = findByKey(key);
+    if (!again || again.offsetParent === null) return;
+    again.focus({ preventScroll: true });
+    if (caret) try { again.setSelectionRange(caret[0], caret[1]); } catch (e) {}
+  }
+  function renderView() {
     const view = location.hash === "#graficos" ? "charts" : location.hash === "#metas" ? "goals" : "lanc";
     [["tabLanc", "lanc"], ["tabCharts", "charts"], ["tabGoals", "goals"]].forEach(([id, v]) => {
       if (v === view) $(id).setAttribute("aria-current", "page"); else $(id).removeAttribute("aria-current");
@@ -1294,7 +1343,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (has) { renderAlerts(); renderSummary(); renderForecast(); renderBoard("income"); renderBoard("expense"); renderPlans(); } else $("alerts").hidden = $("forecast").hidden = $("secInst").hidden = true;
     if (state.focusAdder) {
       const inp = document.querySelector(`.adder[data-ctx="${state.focusAdder}"] input`);
-      if (inp) inp.focus();
+      if (inp) focusAfterRender = () => inp.focus();
       state.focusAdder = null;
     }
   }
@@ -1802,7 +1851,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         payOn(c) ? payBadge(c) : null)),
       el("span", { class: "card-total" }, fmt(sum)),
       el("button", { class: "iconbtn trash", "aria-label": `Excluir a tabela ${c.name}`, title: "Excluir tabela", onclick: () => deleteCtx(kind, c.id) }, trashIcon()),
-      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; state.payDraft = null; render(); } }, "⋯"));
+      el("button", { class: "iconbtn", "aria-label": `Opções de ${c.name}`, "aria-expanded": String(menuOpen), title: "Renomear, cor, posição ou excluir", onclick: () => { state.menu = menuOpen ? null : c.id; state.payDraft = null; state.menuDraft = null; render(); } }, "⋯"));
 
     const rows = items.length
       ? el("ul", { class: "rows" }, ...items.map(e => row(e)))
@@ -1810,10 +1859,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
     // linha de inclusão
     const splitN = payOn(c) && c.pay.parts.length > 1 ? c.pay.parts.length : 0;
-    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, value: draft.name });
-    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, value: draft.value });
+    const nameIn = el("input", { type: "text", placeholder: kind === "income" ? (splitN ? `Nova entrada (${splitN} datas)` : "Nova entrada") : "Novo gasto", maxlength: "120", "aria-label": `Nome do item em ${c.name}`, enterkeyhint: "next", value: draft.name });
+    const valIn = el("input", { class: "val", inputmode: "decimal", placeholder: kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? "total" : "0,00", "aria-label": kind === "expense" && state.instDraft && state.instDraft.ctx === c.id ? `Valor total da compra em ${c.name}` : `Valor em ${c.name}`, enterkeyhint: "done", value: draft.value });
     const addBtn = el("button", { type: "submit", "aria-label": `Adicionar em ${c.name}`, title: "Adicionar (Enter)" }, "+");
-    const err = el("p", { class: "adder-err", hidden: true });
+    const err = el("p", { class: "adder-err", role: "alert", hidden: true });
     // o item entra com a data de hoje (ou o mesmo dia em outro mês); a data de cada item muda na própria linha
     const sync = () => { state.drafts[c.id] = { name: nameIn.value, value: valIn.value }; };
     nameIn.addEventListener("input", sync); valIn.addEventListener("input", sync);
@@ -1899,9 +1948,19 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const shown = dateOf(mid, entryDay(mid, e));      // registro antigo sem dia: mostra o dia em que foi lançado
       const dIn = dateInput(mid, { value: shown, "aria-label": isIn ? "Data do recebimento" : "Data do gasto ou vencimento",
         title: isIn ? "Dia em que o dinheiro cai (vazio = hoje)" : "Dia do gasto; data futura vira conta a vencer (vazio = hoje)" });
+      const err = el("p", { class: "row-err", role: "alert", hidden: true });
       let done = false;
-      const commit = (save) => {
-        if (done) return; done = true;
+      // explicit = Enter ou ✓: com erro, a edição fica aberta mostrando o motivo.
+      // Saindo do item (clique em outro lugar), um erro descarta a mudança e avisa.
+      const commit = (save, explicit) => {
+        if (done) return;
+        if (save) {
+          const name = n.value.trim(), value = parseMoney(v.value);
+          const problem = !name ? "Escreva o nome do item." : !(value > 0) ? "Valor inválido. Use por exemplo 45,90." : "";
+          if (problem && explicit) { err.textContent = problem; err.hidden = false; (name ? v : n).focus(); return; }
+          if (problem) { save = false; showToast(`Alteração não salva: ${problem.toLowerCase().replace(/\.$/, "")}`, 8000, false); }
+        }
+        done = true;
         if (save) {
           const name = n.value.trim(), value = parseMoney(v.value);
           const t = entries().find(x => x.id === e.id);   // versão atual (a sincronização pode ter trocado o objeto)
@@ -1916,21 +1975,38 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
             store.saveMonth(state.selected); hist.label(`"${name}" editado`);
           }
         }
-        state.edit = null; render();
+        // só fecha a edição se ela ainda for deste item (um clique em outro item já pode ter aberto aquele)
+        if (state.edit && state.edit.id === e.id) state.edit = null;
+        render();
       };
-      const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true); } if (ev.key === "Escape") commit(false); };
+      const keys = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(true, true); } if (ev.key === "Escape") commit(false); };
+      [n, v, dIn].forEach(i => i.addEventListener("input", () => { err.hidden = true; }));
       n.addEventListener("keydown", keys); v.addEventListener("keydown", keys); dIn.addEventListener("keydown", keys);
+      n.setAttribute("enterkeyhint", "done"); v.setAttribute("enterkeyhint", "done");
       // nome em cima; valor e data embaixo, na mesma ordem das colunas da lista
-      const li = el("li", { class: "row with-day" }, n, v, dIn, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true) }, "✓"));
-      li.addEventListener("focusout", () => setTimeout(() => { if (!li.contains(document.activeElement)) commit(true); }, 0));
-      requestAnimationFrame(() => {
-        const f = state.edit && state.edit.field;
-        if (f === "date") { dIn.focus(); try { dIn.showPicker(); } catch (err) {} return; }   // clique na data: já abre o calendário
-        const t = f === "value" ? v : n; t.focus(); t.select();
+      const li = el("li", { class: "row with-day" }, n, v, dIn, el("button", { class: "iconbtn", "aria-label": "Salvar", title: "Salvar (Enter)", onmousedown: (ev) => ev.preventDefault(), onclick: () => commit(true, true) }, "✓"), err);
+      // Saindo do item: se o mouse/dedo ainda está pressionado (clique em outro lugar), espera o clique
+      // terminar antes de salvar e redesenhar; antes, o redesenho apagava o alvo e o clique se perdia.
+      li.addEventListener("focusout", () => {
+        const go = () => setTimeout(() => {
+          // esta linha foi redesenhada e a edição do mesmo item continua na linha nova: quem salva é ela
+          if (!li.isConnected && state.edit && state.edit.id === e.id) return;
+          if (!li.contains(document.activeElement)) commit(true);
+        }, 0);
+        if (pointerIsDown) afterPointer(go); else go();
       });
+      // foco na hora (sem esperar o próximo quadro), para o teclado do iPhone abrir; só ao abrir a edição
+      if (state.edit.fresh) {
+        state.edit.fresh = false;
+        const f = state.edit.field;
+        focusAfterRender = () => {
+          if (f === "date") { dIn.focus(); try { dIn.showPicker(); } catch (x) {} return; }   // clique na data: já abre o calendário
+          const t = f === "value" ? v : n; t.focus(); t.select();
+        };
+      }
       return li;
     }
-    const open = (field) => { state.edit = { id: e.id, field }; state.menu = null; render(); };
+    const open = (field) => { state.edit = { id: e.id, field, fresh: true }; state.menu = null; render(); };
     const ctx = findCtx(e.ctx)[1], part = partOf(ctx, e);
     // data: coluna própria depois do valor; a cor só aparece em conta vencida, vencendo hoje ou nos próximos dias
     const mid = state.selected;
@@ -1941,27 +2017,37 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       const st = dueState(mid, e);
       dcls = ` due-${st}`;
       dtitle = st === "paid" ? `Paga · dia ${dayLabel(mid, e.day)}` : `${dueText(mid, e, st)}. ${dueTitle(mid, e)}`;
-      check = el("button", { class: "paycheck", type: "button", "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
+      check = el("button", { class: "paycheck", type: "button", "data-focus": "paid:" + e.id, "aria-pressed": String(!!e.paid), "aria-label": `${e.paid ? "Desmarcar" : "Marcar"} ${e.name} como paga`, title: e.paid ? "Paga. Clique para desmarcar" : "Marcar como paga", onclick: () => togglePaid(e.id) }, "✓");
     }
     // conta em aberto mostra o dia em que dá para pagar (vencimento adiado para o dia útil)
     const shownDay = e.day && e.kind === "expense" && !e.paid ? dueDay(mid, Math.min(e.day, daysIn(mid))) : entryDay(mid, e);
     return el("li", { class: "row" + (check ? " has-check" : "") + (e.paid ? " is-paid" : "") }, check,
-      el("button", { class: "cell name", title: "Clique para editar", onclick: () => open("name") }, e.name),
-      el("button", { class: "cell val", title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
-      el("button", { class: "cell date" + dcls, title: dtitle + " · Clique para mudar a data", "aria-label": `Data de ${e.name}: ${dayLabel(mid, shownDay)}. ${dtitle}`, onclick: () => open("date") }, dayLabel(mid, shownDay)),
+      el("button", { class: "cell name", "data-focus": "name:" + e.id, title: "Clique para editar", onclick: () => open("name") }, e.name),
+      el("button", { class: "cell val", "data-focus": "val:" + e.id, title: "Clique para editar", onclick: () => open("value") }, fmtPlain(e.value)),
+      el("button", { class: "cell date" + dcls, "data-focus": "date:" + e.id, title: dtitle + " · Clique para mudar a data", "aria-label": `Data de ${e.name}: ${dayLabel(mid, shownDay)}. ${dtitle}`, onclick: () => open("date") }, dayLabel(mid, shownDay)),
       el("button", { class: "iconbtn del", "aria-label": `Remover ${e.name}`, title: "Remover", onclick: () => removeEntry(e.id) }, "×"));
   }
 
   function menu(kind, c) {
     const used = Object.values(state.months).reduce((n, m) => n + m.entries.filter(e => e.ctx === c.id).length, 0);
     const cur = () => ctxs(kind).find(x => x.id === c.id) || c;   // a sincronização pode trocar o objeto
-    const name = el("input", { id: `rn-${c.id}`, type: "text", value: c.name, maxlength: "40" });
+    // o nome digitado fica num rascunho: clicar numa cor ou mover a tabela redesenha o menu sem perder o texto
+    if (!state.menuDraft || state.menuDraft.id !== c.id) state.menuDraft = { id: c.id, name: c.name, err: "" };
+    const draft = state.menuDraft;
+    const name = el("input", { id: `rn-${c.id}`, type: "text", value: draft.name, maxlength: "40", enterkeyhint: "done", "aria-invalid": draft.err ? "true" : null, "aria-describedby": draft.err ? `rn-err-${c.id}` : null });
+    name.addEventListener("input", () => { draft.name = name.value; if (draft.err) { draft.err = ""; errP.hidden = true; name.removeAttribute("aria-invalid"); } });
+    const errP = el("p", { class: "err", id: `rn-err-${c.id}`, role: "alert", hidden: !draft.err }, draft.err);
     const save = () => {
       const v = name.value.trim().replace(/\s+/g, " "), t = cur();
-      if (v && v !== t.name && !ctxs(kind).some(x => x.id !== t.id && plainName(x.name) === plainName(v))) { const old = t.name; t.name = v; store.saveSettings(); hist.label(`Tabela "${old}" renomeada para "${v}"`); }
-      state.menu = null; render();
+      const same = ctxs(kind).find(x => x.id !== t.id && plainName(x.name) === plainName(v));
+      if (!v || same) {   // mostra o motivo e deixa o menu aberto
+        draft.err = !v ? "Escreva um nome para a tabela." : `Já existe uma tabela "${same.name}".`;
+        render(); return;
+      }
+      if (v !== t.name) { const old = t.name; t.name = v; store.saveSettings(); hist.label(`Tabela "${old}" renomeada para "${v}"`); }
+      state.menu = null; state.menuDraft = null; render();
     };
-    name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; render(); } });
+    name.addEventListener("keydown", (ev) => { if (ev.key === "Enter") save(); if (ev.key === "Escape") { state.menu = null; state.menuDraft = null; render(); } });
     const swatches = el("div", { class: "swatches" }, ...Array.from({ length: KCOUNT }, (_, i) =>
       el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(colorOf(kind, c) === `var(--k${i})`), onclick: () => { cur().color = i; store.saveSettings(); hist.label(`Cor da tabela "${cur().name}" trocada`); render(); } })));
     const list = ctxs(kind), pos = list.indexOf(c);
@@ -1972,7 +2058,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("span", { class: "pos-n num", "aria-live": "polite" }, `${pos + 1} de ${list.length}`),
       el("button", { class: "btn", type: "button", disabled: pos === list.length - 1 || null, "aria-label": `Mover ${c.name} para depois`, onclick: () => moveCtx(kind, c.id, pos + 1) }, "Depois →"))];
     return el("div", { class: "menu" },
-      el("label", { for: `rn-${c.id}` }, "Nome da tabela"), name,
+      el("label", { for: `rn-${c.id}` }, "Nome da tabela"), name, errP,
       position,
       el("span", { class: "small" }, "Cor"), swatches,
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); hist.label(`"${t.name}" ${t.repeat ? "passou a repetir" : "deixou de repetir"} no próximo mês`); render(); } },
@@ -2602,6 +2688,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // Popup de confirmação (resolve true se o usuário confirmar)
   function confirmDialog({ title, text, details, ok }) {
     const dlg = $("confirm");
+    // já tem um aberto (ex.: duplo clique na lixeira): o segundo pedido é ignorado, o primeiro segue valendo
+    if (dlg.open) return Promise.resolve(false);
     $("cfTitle").textContent = title;
     $("cfText").textContent = text;
     $("cfDetails").replaceChildren(...(details || []).map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", { class: "num" }, v))));
@@ -2767,10 +2855,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   document.querySelectorAll("[data-theme-set]").forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.themeSet)));
   applyTheme(document.documentElement.dataset.theme || "auto");
+  // no "igual ao sistema", a cor da barra do navegador acompanha a troca de claro/escuro do sistema
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!document.documentElement.dataset.theme) applyTheme("auto"); });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && openDropup()) { const b = openDropup().querySelector(".mb-btn"); closeDropups(); b.focus(); return; }
-    if (e.key === "Escape" && state.menu) { state.menu = null; render(); }
+    if (e.key === "Escape" && !$("newMonthSheet").hidden) { $("newMonthSheet").hidden = true; $("openNewMonth").focus({ preventScroll: true }); return; }
+    if (e.key === "Escape" && state.menu) { state.menu = null; state.menuDraft = null; render(); }
   });
 
   // ---------- Celular: barra fixa embaixo ----------
@@ -2833,9 +2924,17 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     setUndo(fn, text) { showToast(text, 10000); },   // o desfazer agora vem do histórico (fn não é mais usada)
     historyLabel(text) { hist.label(text); },
   };
-  window.addEventListener("hashchange", () => { window.scrollTo({ top: 0 }); render(); });
+  // Navegação: uma troca de página pelo # dispara "popstate" e "hashchange"; os dois pedidos viram um render só
+  let routeQueued = false;
+  const routeRender = (top) => {
+    if (top) window.scrollTo({ top: 0 });
+    if (routeQueued) return;
+    routeQueued = true;
+    setTimeout(() => { routeQueued = false; render(); }, 0);
+  };
+  window.addEventListener("hashchange", () => routeRender(true));
   $("tabLanc").addEventListener("click", (e) => { e.preventDefault(); history.pushState(null, "", location.pathname); window.scrollTo({ top: 0 }); render(); });
-  window.addEventListener("popstate", render);
+  window.addEventListener("popstate", () => routeRender(false));
 
   hist.load();
   updateHistBar();
