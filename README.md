@@ -99,6 +99,12 @@ Se a porta 3000 já estiver em uso por outro programa, rode no terminal, dentro 
 
 O app só atende a rede local. Para abrir de fora (4G, outra casa), instale uma VPN como o [Tailscale](https://tailscale.com) no computador e no celular. **Não abra a porta no roteador**: o app não tem senha, e qualquer pessoa na internet conseguiria ver seus dados.
 
+#### Segurança
+
+- O app funciona **sem internet**: as fontes vêm junto, em `public/fonts/` (licença livre, em `OFL.txt`).
+- Ele só abre pelo **localhost**, por um **IP** (como o `192.168.x.x` do celular ou o `100.x.x.x` do Tailscale) ou pelo **nome do computador**. Endereços de outros domínios são recusados, para que um site de fora não consiga acessar seus dados pelo navegador.
+- O **Desligar** só é aceito do próprio painel, no próprio computador.
+
 ### Onde ficam os seus dados
 
 - Tudo fica em `caderno-gastos/dados/caderno.json`.

@@ -192,7 +192,9 @@ def server_info(port, timeout=0.8):
 def request_shutdown(port):
     """Pede ao servidor para gravar e sair (só é aceito do próprio computador)."""
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/shutdown", method="POST", data=b"")
+        # o cabeçalho prova que o pedido vem do painel (uma página no navegador não consegue mandá-lo)
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/shutdown", method="POST", data=b"",
+                                     headers={"X-Caderno-Painel": "1"})
         urllib.request.urlopen(req, timeout=2).read()
         return True
     except Exception:
