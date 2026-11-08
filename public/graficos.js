@@ -113,6 +113,12 @@
     if (tip) return tip;
     tip = el("div", { class: "ctip", role: "tooltip", hidden: true });
     document.body.append(tip);
+    // toque fora de um item com dica esconde a dica (no toque não existe "tirar o mouse de cima")
+    document.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" || e.target.closest("[data-tip]")) return;
+      tip.hidden = true;
+      document.querySelectorAll(".is-hot").forEach(n => n.classList.remove("is-hot"));
+    }, true);
     return tip;
   }
   function bindTips(root) {
@@ -127,14 +133,20 @@
       if (top + r.height > innerHeight - 8) top = y - r.height - 14;
       t.style.left = Math.max(8, left) + "px"; t.style.top = Math.max(8, top) + "px";
     };
-    root.addEventListener("pointermove", (e) => {
+    const hover = (e) => {
       const target = e.target.closest("[data-tip]");
       if (!target || !root.contains(target)) { t.hidden = true; root.querySelectorAll(".is-hot").forEach(n => n.classList.remove("is-hot")); return; }
       root.querySelectorAll(".is-hot").forEach(n => n !== target && n.classList.remove("is-hot"));
       target.classList.add("is-hot");
       show(target, e.clientX, e.clientY);
+    };
+    root.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.pressure) hover(e); });
+    // toque: tocar num item mostra a dica, que fica até tocar em outro lugar
+    root.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") hover(e); });
+    root.addEventListener("pointerleave", (e) => {
+      if (e.pointerType !== "mouse") return;   // no toque o "sair" vem logo depois do toque: a dica fica
+      t.hidden = true; root.querySelectorAll(".is-hot").forEach(n => n.classList.remove("is-hot"));
     });
-    root.addEventListener("pointerleave", () => { t.hidden = true; root.querySelectorAll(".is-hot").forEach(n => n.classList.remove("is-hot")); });
     root.addEventListener("focusin", (e) => {
       const target = e.target.closest("[data-tip]");
       if (target) { const r = target.getBoundingClientRect(); show(target, r.right, r.top); }
