@@ -213,7 +213,7 @@
     }
   }
   function columns(items, base) {
-    const n = items.length, band = 76, padL = 64, padT = 22, H = 200, padB = 34;
+    const n = items.length, band = 76, padL = 84, padT = 22, H = 200, padB = 34;
     const W = Math.max(padL + n * band + 8, 360);
     const max = niceMax(Math.max(...items.map(i => i.value)));
     const g = svg("g");
@@ -233,8 +233,8 @@
   function evoSeries(months, mode) {
     if (mode === "all") {
       return [
-        { id: "in", label: "Entradas", color: "var(--earn)", values: months.map(m => total([m], "income")) },
-        { id: "out", label: "Gastos", color: "var(--spend)", values: months.map(m => total([m], "expense")) },
+        { id: "in", label: "↑ Entradas", color: "var(--earn)", values: months.map(m => total([m], "income")) },
+        { id: "out", label: "↓ Gastos", color: "var(--spend)", values: months.map(m => total([m], "expense")) },
       ];
     }
     const items = compItems(months, mode);
@@ -249,14 +249,28 @@
     }));
   }
 
+  // Gastos × Entradas no modo Geral: os dois tons do tema são parecidos, então gastos ganham padrão próprio
+  // (coluna listrada, linha tracejada). O padrão listrado vai num <defs> com id único por gráfico.
+  let hatchSeq = 0;
+  const isOut = (s) => s.id === "out";
+  function hatchDefs(g) {
+    const id = `hatch-${++hatchSeq}`;
+    const pat = svg("pattern", { id, patternUnits: "userSpaceOnUse", width: 6, height: 6, patternTransform: "rotate(45)" });
+    pat.append(svg("rect", { width: 6, height: 6, fill: "var(--spend)" }), svg("rect", { width: 2.2, height: 6, fill: "var(--surface)", opacity: ".55" }));
+    const defs = svg("defs"); defs.append(pat); g.append(defs);
+    return `url(#${id})`;
+  }
+
   function evolution(months, series, type, mode) {
-    const n = months.length, band = Math.max(64, Math.min(110, 640 / Math.max(n, 1))), padL = 64, padT = 16, H = 220, padB = 30;
+    const n = months.length, band = Math.max(64, Math.min(110, 640 / Math.max(n, 1))), padL = 84, padT = 16, H = 220, padB = 30;
     const W = Math.max(padL + n * band + 8, 360);
     const grouped = mode === "all" && type === "stacked";
     const totals = months.map((_, i) => series.reduce((s, se) => s + se.values[i], 0));
     const peak = type === "lines" || grouped ? Math.max(...series.flatMap(s => s.values)) : Math.max(...totals);
     const max = niceMax(peak);
     const g = svg("g");
+    const hatch = mode === "all" ? hatchDefs(g) : null;
+    const fillOf = (s) => hatch && isOut(s) ? hatch : s.color;
     axis(g, W, H, padL, padT, max);
     const yOf = (v) => padT + H - v / max * H;
     const tipFor = (i) => {
@@ -275,7 +289,7 @@
         const w = Math.min(26, band * 0.3), gap = 2, start = x0 + (band - (2 * w + gap)) / 2;
         series.forEach((s, k) => {
           const v = s.values[i], h = Math.max(v / max * H, v > 0 ? 1.5 : 0);
-          if (h > 0) g.append(svg("path", { d: colPath(start + k * (w + gap), padT + H - h, w, h), fill: s.color, class: "mark" }));
+          if (h > 0) g.append(svg("path", { d: colPath(start + k * (w + gap), padT + H - h, w, h), fill: fillOf(s), class: "mark" + (isOut(s) ? " out" : "") }));
         });
       } else {
         const w = Math.min(44, band * 0.56), x = x0 + (band - w) / 2;
@@ -285,7 +299,7 @@
           const y1 = yOf(acc), y2 = yOf(acc + o.v); acc += o.v;
           const h = y1 - y2;
           const d = k === segs.length - 1 ? colPath(x, y2, w, h) : `M${x},${y1}V${y2}H${x + w}V${y1}Z`;
-          g.append(svg("path", { d, fill: o.s.color, class: "mark seg" }));
+          g.append(svg("path", { d, fill: fillOf(o.s), class: "mark seg" }));
         });
         if (totals[i] > 0) g.append(svg("text", { x: x + w / 2, y: yOf(totals[i]) - 6, "text-anchor": "middle", class: "vlabel" }, fmtCompact(totals[i])));
       }
@@ -294,8 +308,10 @@
     if (type === "lines") {
       series.forEach(s => {
         const pts = s.values.map((v, i) => [padL + i * band + band / 2, yOf(v)]);
-        g.append(svg("polyline", { points: pts.map(p => p.join(",")).join(" "), class: "line", stroke: s.color }));
-        pts.forEach(([x, y]) => g.append(svg("circle", { cx: x, cy: y, r: 4.5, class: "dot", fill: s.color })));
+        const out = mode === "all" && isOut(s);
+        g.append(svg("polyline", { points: pts.map(p => p.join(",")).join(" "), class: "line" + (out ? " out" : ""), stroke: s.color }));
+        // gastos: linha tracejada e pontos vazados; entradas: linha cheia e pontos cheios
+        pts.forEach(([x, y]) => g.append(svg("circle", { cx: x, cy: y, r: 4.5, class: "dot" + (out ? " out" : ""), fill: out ? "var(--surface)" : s.color, stroke: out ? s.color : null })));
       });
     }
     // camada de hover por mês (alvo maior que a marca)
@@ -448,8 +464,8 @@
     const vsTxt = prevMonths.length ? `${partial ? "parcial " : ""}${byMonth ? "média/mês " : ""}vs. ${periodLabel(pKey, cs.period).replace(/^Ano de /, "")}` : "sem período anterior";
     const saldo = api.sumMoney([tin, -tout]), psaldo = api.sumMoney([ptin, -ptout]);
     const kpis = el("div", { class: "kpis" },
-      kpi("Entradas", api.fmt(tin), vsTxt, "in", prevMonths.length ? delta(ain, ptin / nP) : null, true),
-      kpi("Gastos", api.fmt(tout), vsTxt, "out", prevMonths.length ? delta(aout, ptout / nP) : null, false),
+      kpi("↑ Entradas", api.fmt(tin), vsTxt, "in", prevMonths.length ? delta(ain, ptin / nP) : null, true),
+      kpi("↓ Gastos", api.fmt(tout), vsTxt, "out", prevMonths.length ? delta(aout, ptout / nP) : null, false),
       kpi("Saldo", api.fmt(saldo), partial ? "mês em andamento" : prevMonths.length ? `antes: ${api.fmt(psaldo)}` : "", saldo < 0 ? "neg" : ""),
       cs.period === "month"
         ? kpi("Renda gasta", tin > 0 ? fmtPct(pct(tout, tin)) : "–", tin > 0 ? `${fmtPct(Math.max(0, pct(saldo, tin)))} economizado` : "sem entradas", "")
@@ -493,7 +509,7 @@
         el("div", {}, el("h3", {}, "Evolução mês a mês"), el("p", {}, cs.period === "month" ? `Últimos ${evoMonths.length} meses até ${api.monthLabel(cs.key)}` : periodLabel(cs.key, cs.period))),
         seg("Tipo de gráfico da evolução", cs.evo, [["stacked", mode === "all" ? "Colunas" : "Empilhado"], ["lines", "Linhas"]], (v) => update({ evo: v }))),
       series.length
-        ? el("div", {}, el("ul", { class: "slegend" }, ...series.map(s => el("li", {}, el("i", { style: `background:${s.color}` }), s.label))), evolution(evoMonths, series, cs.evo, mode))
+        ? el("div", {}, el("ul", { class: "slegend" }, ...series.map(s => el("li", {}, el("i", { class: mode === "all" && isOut(s) ? "out" : null, style: `background:${s.color}` }), s.label))), evolution(evoMonths, series, cs.evo, mode))
         : el("p", { class: "cempty" }, "Sem valores para mostrar neste intervalo."));
 
     // Tabela
