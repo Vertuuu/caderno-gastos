@@ -149,7 +149,8 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - As ordenações valem para todos os aparelhos e entram no **desfazer**.
 - **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
-- **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**).
+- **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**). O aviso fica 8 segundos, pausa com o mouse em cima e, se fosse cobrir o campo em que você digita, aparece no topo.
+- **Salvamento:** ao lado do nome do app, no topo, aparece **Salvo**, **Salvando…** ou **Sem conexão** (passe o mouse para ver os detalhes). Se algo não puder ser salvo, uma faixa vermelha fica presa no topo com o motivo e o botão **Tentar agora**; as alterações ficam guardadas no aparelho até conseguirem ser enviadas.
 
 ### Data dos lançamentos
 
