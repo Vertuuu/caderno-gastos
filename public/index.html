@@ -1950,7 +1950,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
 
   // Tons para escolher: os do tema atual e, abaixo, os emprestados dos outros temas. "mine" = tom já escolhido.
-  function setTone(c, theme, i) { c.color = i; if (theme === lookOf().theme) delete c.colorTheme; else c.colorTheme = theme; }
+  function setTone(c, theme, i) { c.color = i; if (theme === lookOf().theme && !c.keepColor) delete c.colorTheme; else c.colorTheme = theme; }
   // Nos seletores, os tons aparecem do mais escuro para o mais claro (o índice gravado na tabela não muda).
   // A ordem vem da luminância real de cada tom na tela (matiz e saturação mudam o quanto ele parece claro),
   // medida uma vez por tema + modo.
@@ -2271,6 +2271,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
       el("span", { class: "small" }, "Cor"), swatches,
       el("button", { class: "toggle", type: "button", "aria-pressed": String(isRepeat(c)), onclick: () => { const t = cur(); t.repeat = !isRepeat(t); store.saveSettings(); hist.label(`"${t.name}" ${t.repeat ? "passou a repetir" : "deixou de repetir"} no próximo mês`); render(); } },
         el("span", { class: "box" }, "✓"), "Repetir os itens ao criar o próximo mês"),
+      // "Manter cor": ao ligar, a cor de agora fica gravada com o tema dela (não muda quando o tema da página mudar)
+      el("button", { class: "toggle", type: "button", "aria-pressed": String(!!c.keepColor), onclick: () => {
+        const t = cur();
+        if (t.keepColor) { delete t.keepColor; if (t.colorTheme === lookOf().theme) delete t.colorTheme; }
+        else { t.keepColor = true; if (!t.colorTheme) { t.color = colorIdx(kind, t); t.colorTheme = lookOf().theme; } }
+        store.saveSettings(); hist.label(`"${t.name}" ${t.keepColor ? "passou a manter" : "deixou de manter"} a cor ao trocar de tema`); render();
+      } }, el("span", { class: "box" }, "✓"), "Manter esta cor ao trocar de tema"),
       kind === "income" ? payMenu(c) : null,
       el("div", { class: "menu-actions" },
         el("button", { class: "btn danger", onclick: () => deleteCtx(kind, c.id) }, "Excluir tabela"),
@@ -3104,10 +3111,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (look[k] === v) return;
     if (k === "theme") {
       // trocar de tema devolve as cores das tabelas ao automático; pergunta antes se alguma foi escolhida à mão
-      const manual = ["income", "expense"].some(kind => ctxs(kind).some(c => c.colorTheme ||
-        (Number.isInteger(c.color) && c.color !== autoIdx(kind, c))));
-      if (manual && !(await confirmDialog({ title: `Usar o tema ${themeName(v)}?`, text: "As cores escolhidas nas tabelas voltam ao automático, nos tons do novo tema. Dá para desfazer.", ok: "Trocar tema" }))) return;
-      for (const kind of ["income", "expense"]) ctxs(kind).forEach(c => { delete c.color; delete c.colorTheme; });
+      // (tabelas com "Manter cor" ficam como estão)
+      const all = ["income", "expense"].flatMap(kind => ctxs(kind).map(c => [kind, c]));
+      const kept = all.filter(([, c]) => c.keepColor).length;
+      const manual = all.some(([kind, c]) => !c.keepColor && (c.colorTheme || (Number.isInteger(c.color) && c.color !== autoIdx(kind, c))));
+      const keptTxt = kept ? ` ${kept === 1 ? "A tabela marcada com \"Manter cor\" continua igual" : `As ${kept} tabelas marcadas com "Manter cor" continuam iguais`}.` : "";
+      if (manual && !(await confirmDialog({ title: `Usar o tema ${themeName(v)}?`, text: `As cores escolhidas nas tabelas voltam ao automático, nos tons do novo tema.${keptTxt} Dá para desfazer.`, ok: "Trocar tema" }))) return;
+      all.forEach(([, c]) => { if (!c.keepColor) { delete c.color; delete c.colorTheme; } });
     }
     state.settings.look = { ...look, [k]: v };
     applyLook();
@@ -3217,7 +3227,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
   // API usada pela página de gráficos (graficos.js)
   const chartsApi = {
-    state, el, fmt, fmtPlain, monthLabel, monthIds, findCtx, colorOf, ctxs, parseMoney, uid, store, confirmDialog,
+    state, el, fmt, fmtPlain, monthLabel, monthIds, findCtx, colorOf, ctxs, parseMoney, uid, store, confirmDialog, toneSet, toneOf, lookOf,
     currentMonthId, shiftMonth, sumMoney, plainName,
     setUndo(fn, text) { showToast(text, 10000); },   // o desfazer agora vem do histórico (fn não é mais usada)
     historyLabel(text) { hist.label(text); },

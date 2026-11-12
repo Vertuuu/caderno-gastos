@@ -231,11 +231,12 @@ function cleanSettings(b) {
     if (!Array.isArray(list) || list.length > 200) return null;
     if (!list.every(c => isObj(c) && isStr(c.id, 40) && isStr(c.name, 60) && optBool(c.repeat) && (c.sort === undefined || ITEM_SORTS.includes(c.sort)) &&
       (c.color === undefined || (Number.isInteger(c.color) && c.color >= 0 && c.color < KCOUNT)) &&
-      (c.colorTheme === undefined || LOOK.theme.includes(c.colorTheme)) && cleanPay(c.pay) !== null)) return null;
+      (c.colorTheme === undefined || LOOK.theme.includes(c.colorTheme)) && optBool(c.keepColor) && cleanPay(c.pay) !== null)) return null;
     out[k] = list.map(c => {
       const o = { id: c.id, name: c.name };
       if (c.color !== undefined) o.color = c.color;
       if (c.colorTheme !== undefined) o.colorTheme = c.colorTheme;   // tom "emprestado" de outro tema
+      if (c.keepColor !== undefined) o.keepColor = c.keepColor;      // mantém a cor ao trocar de tema
       if (c.repeat !== undefined) o.repeat = c.repeat;
       if (c.pay !== undefined) o.pay = cleanPay(c.pay);
       if (c.sort !== undefined) o.sort = c.sort;      // ordem dos itens dentro da tabela
@@ -298,13 +299,14 @@ function cleanGoals(b) {
     (g.basis === "monthly" || g.basis === "months") &&
     (g.basis === "monthly" ? posNum(g.monthly) && g.monthly > 0 : Number.isInteger(g.months) && g.months > 0 && g.months <= 1200) &&
     (g.saved === undefined || posNum(g.saved)) && optBool(g.active) &&
-    Number.isInteger(g.color) && g.color >= 0 && g.color < KCOUNT);
+    Number.isInteger(g.color) && g.color >= 0 && g.color < KCOUNT && (g.colorTheme === undefined || LOOK.theme.includes(g.colorTheme)));
   if (!ok || !uniqueIds(b.goals)) return null;
   return b.goals.map(g => {
     const o = { id: g.id, name: g.name, value: g.value, basis: g.basis, color: g.color, saved: g.saved || 0 };
     if (posNum(g.monthly)) o.monthly = g.monthly;
     if (Number.isInteger(g.months) && g.months > 0) o.months = g.months;
     if (g.active !== undefined) o.active = g.active;
+    if (g.colorTheme !== undefined) o.colorTheme = g.colorTheme;   // tom de outro tema
     return o;
   });
 }
