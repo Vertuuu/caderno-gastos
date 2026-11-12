@@ -219,11 +219,18 @@
 
   function row(g) {
     const d = derive(g);
-    const k = `var(--k${g.color % KCOUNT})`;
+    // cor: tom do tema atual (segue o tema) ou de outro tema (fica fixa); seletor igual ao das tabelas
+    const k = g.colorTheme && g.colorTheme !== api.lookOf().theme ? api.toneOf(g.colorTheme, g.color % KCOUNT) : `var(--k${g.color % KCOUNT})`;
+    const dot = el("button", { class: "gdot", style: `background:${k}`, title: "Trocar cor", "aria-label": `Trocar cor de ${g.name}`, "aria-expanded": String(colorOpen === g.id),
+      onclick: () => { colorOpen = colorOpen === g.id ? null : g.id; edit = null; render(); } });
     const swatchCell = colorOpen === g.id
-      ? el("div", { class: "gswatches", role: "group", "aria-label": `Cor de ${g.name}` }, ...Array.from({ length: KCOUNT }, (_, i) =>
-          el("button", { class: "swatch", style: `--s: var(--k${i})`, "aria-label": `Cor ${i + 1}`, "aria-pressed": String(i === g.color), onclick: () => { g.color = i; colorOpen = null; save(); api.historyLabel(`Cor da meta "${g.name}" trocada`); } })))
-      : el("button", { class: "gdot", style: `background:${k}`, title: "Trocar cor", "aria-label": `Trocar cor de ${g.name}`, onclick: () => { colorOpen = g.id; edit = null; render(); } });
+      ? [dot, el("div", { class: "cpop gpop", role: "group", "aria-label": `Cor de ${g.name}` },
+          api.toneSet(k, (theme, i) => {
+            g.color = i;
+            if (theme === api.lookOf().theme) delete g.colorTheme; else g.colorTheme = theme;
+            colorOpen = null; save(); api.historyLabel(`Cor da meta "${g.name}" trocada`);
+          }))]
+      : dot;
     const on = isActive(g);
     return el("tr", { class: `grow ${d.done ? "done" : ""} ${on ? "" : "inactive"}`, style: `--k:${k}` },
       el("td", { class: "gcheck" }, el("label", { class: "gtoggle", title: on ? "Ativa: entra no resumo do topo. Clique para desativar." : "Inativa: fora do resumo do topo. Clique para ativar." },
@@ -344,8 +351,35 @@
         list.length ? null : el("p", { class: "ghint" }, "Nenhuma meta ainda. Preencha a linha acima: por exemplo PS5, 5.000,00 e 12 meses, ou PS5, 5.000,00 e 200,00 por mês.")));
 
     if (focusAdd) { focusAdd = false; $("gNewName").focus(); }
+    placeGoalPop();
+  }
+
+  // O quadro de tons fica preso à tela (position: fixed), logo abaixo da bolinha: dentro da tabela,
+  // a área de rolagem horizontal cortaria o quadro. Sem espaço embaixo, abre para cima.
+  function placeGoalPop() {
+    const pop = document.querySelector("#goals .gpop"), dot = pop && pop.parentElement.querySelector(".gdot");
+    if (!pop || !dot) return;
+    popScrollY = scrollY;
+    const r = dot.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, m = 12;
+    pop.style.position = "fixed";
+    pop.style.left = Math.max(m, Math.min(r.left, innerWidth - w - m)) + "px";
+    pop.style.top = (r.bottom + 8 + h > innerHeight - m && r.top - 8 - h > m ? r.top - 8 - h : r.bottom + 8) + "px";
+    pop.style.right = "auto";
   }
 
   window.renderGoals = (a) => { api = a; render(); };
   window.goalsBusy = () => !!(edit || colorOpen);
+  // quadro de tons da meta: fecha ao clicar fora ou com Esc
+  document.addEventListener("click", (e) => {
+    if (colorOpen && !e.composedPath().some(n => n instanceof Element && n.matches(".gcolor"))) { colorOpen = null; render(); }
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && colorOpen) { colorOpen = null; render(); } });
+  // rolar a página de verdade tiraria o quadro de perto da bolinha: fecha. Só a rolagem da janela e só se
+  // ela andou (o redesenho da página a cada sincronização também dispara "scroll" sem mexer em nada).
+  let popScrollY = 0;
+  window.addEventListener("scroll", () => {
+    if (!colorOpen) { popScrollY = scrollY; return; }
+    if (Math.abs(scrollY - popScrollY) > 8) { colorOpen = null; render(); }
+  }, { passive: true });
+  window.addEventListener("resize", () => { if (colorOpen) placeGoalPop(); });
 })();

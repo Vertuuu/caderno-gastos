@@ -148,7 +148,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Ordenar itens de uma tabela:** no seletor **⇅** acima dos itens: **Data (dia 1 → 31)** (padrão), **Data (dia 31 → 1)**, **Nome A–Z**, **Nome Z–A**, **Maior valor** ou **Menor valor**. Cada tabela guarda a sua escolha.
 - As ordenações valem para todos os aparelhos e entram no **desfazer**.
 - **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
-- **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês" e excluir.
+- **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês", marcar "Manter esta cor ao trocar de tema" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**). O aviso fica 8 segundos, pausa com o mouse em cima e, se fosse cobrir o campo em que você digita, aparece no topo.
 - **Salvamento:** ao lado do nome do app, no topo, aparece **Salvo**, **Salvando…** ou **Sem conexão** (passe o mouse para ver os detalhes). Se algo não puder ser salvo, uma faixa vermelha fica presa no topo com o motivo e o botão **Tentar agora**; as alterações ficam guardadas no aparelho até conseguirem ser enviadas.
 
@@ -243,12 +243,13 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - O botão de parcela mostra o valor (**+ R$ 300,00**) e lança esse valor numa tabela de saídas **Metas**, criada automaticamente. Registros com o nome da meta nessa tabela contam para o progresso.
 - No celular, cada meta vira um **card** (sem rolar para o lado), com um resumo curto (quanto falta, quantos meses faltam e quanto vai sobrar); a nova meta é preenchida num card-formulário.
 - Caixa **Ativa** para tirar uma meta do resumo do topo sem apagá-la.
+- A cor da meta pode ser qualquer tom: os do tema atual (acompanham o tema) ou os de outros temas (ficam fixos).
 
 ### Geral
 
 - **Desfazer e Refazer** sempre à mão, no canto inferior direito (ou **Ctrl+Z** e **Ctrl+Y**): voltam qualquer ação, como lançar, editar, remover, renomear, mover, criar ou excluir tabela, mês ou meta. Cada aparelho guarda as **últimas 20 ações** enquanto a aba estiver aberta, e desfazer não apaga o que foi lançado depois em outro aparelho.
 - **Aparência** (botão no topo; no celular, o ícone de paleta da barra de baixo): **tema** Azul, Vermelho, Rosa, Verde ou Roxo, que pinta a página inteira (topo, fundo, cartões, gráficos e metas); **claro, escuro** ou igual ao sistema; **tamanho do texto** P/M/G; **cantos** retos, suaves ou redondos; e **cards por linha** no computador (automático, 2 a 5). Vale para todos os aparelhos e entra no desfazer.
-- As tabelas usam os tons do tema; no menu ⋯ da tabela dá para escolher outro tom, inclusive de outro tema ("Tons de outros temas"). O botão **Cor**, ao lado de Ordenar em Entradas e em Saídas, aplica um mesmo tom a todas as tabelas daquela seção de uma vez. Trocar de tema devolve as cores das tabelas ao automático.
+- As tabelas usam os tons do tema; no menu ⋯ da tabela dá para escolher outro tom, inclusive de outro tema ("Tons de outros temas"). O botão **Cor**, ao lado de Ordenar em Entradas e em Saídas, aplica um mesmo tom a todas as tabelas daquela seção de uma vez. Trocar de tema devolve as cores das tabelas ao automático, menos as marcadas com **"Manter esta cor ao trocar de tema"** (no menu ⋯ da tabela), que continuam com a mesma cor.
 - Entradas e saídas aparecem com sinal e seta (**↑ +** e **↓ −** nos resumos e gráficos; os registros nas tabelas aparecem sem sinal, e a seção define a conta: em Saídas o valor sai, em Entradas entra), e o saldo negativo fica em negrito com fundo destacado.
 - A situação das contas não depende só da cor: **atrasada** aparece como etiqueta cheia (com **!** nos avisos), **vencendo** só com contorno (**◷**) e **paga** em texto fraco (**✓**). Nos gráficos de Entradas × Gastos, os gastos são **listrados** (colunas) ou **tracejados** (linhas). Erros de salvamento ficam sempre em **vermelho**, em qualquer tema.
 - Funciona no celular, com layout próprio para tela pequena: a navegação fica numa **barra fixa embaixo**, com o mês no centro, menus de **páginas** e **aparência** que abrem para cima e **Desfazer/Refazer**; **Novo mês** fica no topo de Lançamentos, junto de Limpar registros e Excluir mês.
