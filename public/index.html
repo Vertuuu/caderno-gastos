@@ -464,11 +464,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .welcome h2 { margin: 0; font-family: var(--f-display); font-size: 26px; }
 .welcome p { margin: 0; color: var(--muted); max-width: 56ch; }
 
-.status { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
-.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-.status[data-state="ok"] i { background: var(--earn); }
-.status[data-state="error"] i { background: var(--spend); }
-.status[data-state="error"] { color: var(--spend); }
+/* status de salvamento, no topo ao lado do nome do app (texto completo no title) */
+.status { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding: 3px 9px; border-radius: 999px; background: rgb(255 255 255 / .08);
+  font-family: var(--f-body); font-weight: 500; font-size: 12px; letter-spacing: 0; color: var(--brand-ink); white-space: nowrap; cursor: default; }
+.status b { width: 7px; height: 7px; border-radius: 50%; background: #9aa3b8; flex: none; }
+.status[data-state="ok"] b { background: #5fd39a; }
+.status[data-state="wait"] b { background: #f2b544; }
+.status[data-state="error"] { background: rgb(255 138 114 / .2); }
+.status[data-state="error"] b { background: #ff8a72; }
+/* faixa de erro presa no topo da tela */
+.errbar { position: sticky; top: 0; z-index: 15; background: #b3261e; color: #fff; }   /* mesmo vermelho escuro nos dois temas (texto branco legível) */
+.errbar .inner { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; padding-block: 9px; font-size: 14px; font-weight: 500; }
+.errbar .btn { background: #fff; color: #b3261e; border-color: #fff; font-weight: 600; padding-block: 5px; }
 
 /* ---------- Ações do mês e popup ---------- */
 .monthtools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-bottom: -18px; }
@@ -501,6 +508,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   background: var(--ink); color: var(--bg); border-radius: 11px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px;
   font-size: 14px; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgb(0 0 0 / .25);
 }
+.toast.top { top: calc(12px + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; }   /* não cobre o campo em uso */
 .toast button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 7px; padding: 4px 11px; font-weight: 600; }
 
 /* ---------- Desfazer / Refazer (sempre visível) ---------- */
@@ -601,7 +609,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 
 <header class="topbar gutter">
   <div class="inner">
-    <div class="logo"><i aria-hidden="true"></i>Caderno de Gastos</div>
+    <div class="logo"><i aria-hidden="true"></i>Caderno de Gastos
+      <span class="status" id="status" data-state="wait" title="Conectando ao servidor…"><b aria-hidden="true"></b><span id="statusText">Conectando…</span></span></div>
     <nav class="views" aria-label="Páginas">
       <a href="#" id="tabLanc">Lançamentos</a>
       <a href="#graficos" id="tabCharts">Gráficos</a>
@@ -622,6 +631,8 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     </div>
   </div>
 </header>
+<!-- erro de salvamento: fica à vista, presa no topo, até voltar a salvar -->
+<div class="errbar gutter" id="errBar" hidden><div class="inner" role="alert"><span id="errText"></span><button class="btn" type="button" id="errRetry">Tentar agora</button></div></div>
 
 <section class="sheet gutter" id="newMonthSheet" hidden aria-labelledby="nmTitle">
   <div class="inner">
@@ -689,7 +700,6 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     <section id="charts" hidden aria-label="Gráficos"></section>
     <section id="goals" hidden aria-label="Metas"></section>
 
-    <div class="status" id="status" data-state="wait"><i></i><span id="statusText">Conectando ao servidor…</span></div>
   </div>
 </main>
 
@@ -974,12 +984,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     updateStatus() {
       const waiting = this.dirty.size + this.inflight.size;
       const rej = Object.values(this.rejected);
-      if (rej.length) setStatus("error", `Uma alteração foi recusada pelo servidor (${rej[0]}). Ela continua só neste aparelho.`);
-      else if (this.offline && waiting) setStatus("error", `Sem conexão com o servidor: ${waiting === 1 ? "1 alteração aguardando" : `${waiting} alterações aguardando`} envio. Tentando de novo…`);
-      else if (this.offline) setStatus("error", "Sem conexão com o servidor. Verifique se ele está ligado e se você está na mesma rede.");
-      else if (waiting) setStatus("wait", "Salvando…");
-      else if (this.heldSince && Date.now() - this.heldSince > 30000) setStatus("wait", "Há mudanças de outro aparelho: termine a edição para ver.");
-      else if (this.ready) setStatus("ok", "Tudo salvo no servidor");
+      if (rej.length) setStatus("error", `Uma alteração foi recusada pelo servidor (${rej[0]}). Ela continua só neste aparelho.`, "Erro ao salvar");
+      else if (this.offline && waiting) setStatus("error", `Sem conexão com o servidor: ${waiting === 1 ? "1 alteração aguardando" : `${waiting} alterações aguardando`} envio. Tentando de novo…`, "Sem conexão");
+      else if (this.offline) setStatus("error", "Sem conexão com o servidor. Verifique se ele está ligado e se você está na mesma rede.", "Sem conexão");
+      else if (waiting) setStatus("wait", "Salvando…", "Salvando…");
+      else if (this.heldSince && Date.now() - this.heldSince > 30000) setStatus("wait", "Há mudanças de outro aparelho: termine a edição para ver.", "Atualização pendente");
+      else if (this.ready) setStatus("ok", "Tudo salvo no servidor", "Salvo");
+    },
+    // "Tentar agora" da faixa de erro: esquece a espera crescente e tenta buscar e enviar já
+    retryNow() {
+      this.backoff = 0; this.retryAt = 0;
+      for (const k of Object.keys(this.rejected)) { delete this.rejected[k]; this.dirty.add(k); }
+      this.pull(false);
+      if (this.dirty.size) this.flushSoon(0);
+      this.updateStatus();
     },
     saveSettings() { this.mark("settings"); },
     saveMonth(id) { this.mark("m:" + id); },
@@ -987,7 +1005,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     savePlans() { this.mark("plans"); },
     deleteMonth(id) { this.mark("m:" + id); },   // o mês já saiu de state.months: o envio vira exclusão
   };
-  function setStatus(s, text) { $("status").dataset.state = s; $("statusText").textContent = text; }
+  // status curto no topo (texto completo no title) e, com erro, a faixa vermelha com a mensagem inteira
+  function setStatus(s, text, short) {
+    const st = $("status");
+    st.dataset.state = s; st.title = text;
+    $("statusText").textContent = short || text;
+    const bar = $("errBar");
+    if (s === "error") {
+      if ($("errText").textContent !== text) $("errText").textContent = text;   // só reescreve se mudou (o leitor de tela lê de novo)
+      bar.hidden = false;
+    } else bar.hidden = true;
+  }
+  $("errRetry").addEventListener("click", () => store.retryNow());
 
   // ---------- Helpers ----------
   const monthIds = () => Object.keys(state.months).sort();
@@ -2664,19 +2693,53 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   });
 
   // Aviso na parte de baixo. Com "undoable", o botão Desfazer do aviso volta exatamente a ação que o gerou.
-  let toastTimer = null;
-  function showToast(text, ms = 6000, undoable = true) {
+  // Fica pelo menos 8 s; pausa enquanto o mouse está em cima ou o foco está nele (ex.: Tab até "Desfazer").
+  // Se fosse cobrir o campo em que se está digitando, aparece no topo da tela.
+  const toastClock = { timer: null, left: 0, since: 0, hold: 0 };
+  function hideToast() { clearTimeout(toastClock.timer); $("toast").hidden = true; hist.toastEntry = null; }
+  function runToastClock() {
+    clearTimeout(toastClock.timer);
+    if (toastClock.hold || $("toast").hidden) return;
+    toastClock.since = Date.now();
+    toastClock.timer = setTimeout(hideToast, toastClock.left);
+  }
+  function pauseToast() {
+    if (toastClock.hold++ || $("toast").hidden) return;
+    clearTimeout(toastClock.timer);
+    toastClock.left = Math.max(1500, toastClock.left - (Date.now() - toastClock.since));
+  }
+  function resumeToast() { toastClock.hold = Math.max(0, toastClock.hold - 1); runToastClock(); }
+  function placeToast() {
+    const t = $("toast"), a = document.activeElement;
+    t.classList.remove("top");
+    if (t.hidden || !a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    const r = t.getBoundingClientRect(), f = a.getBoundingClientRect();
+    if (f.bottom > r.top - 8 && f.top < r.bottom + 8) t.classList.add("top");
+  }
+  function showToast(text, ms = 8000, undoable = true) {
     hist.toastEntry = null;
     undoable = undoable && !!hist.pending;      // só há o que desfazer se a ação mudou algo neste tique
     if (undoable) { hist.label(text); hist.toastWants = true; }
     $("toastText").textContent = text;
     $("toastUndo").hidden = !undoable;
     $("toast").hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; hist.toastEntry = null; }, ms);
+    toastClock.left = Math.max(ms, 8000);
+    toastClock.hold = $("toast").matches(":hover, :focus-within") ? 1 : 0;
+    placeToast();
+    runToastClock();
   }
+  // só mouse de verdade: no toque o "mouseenter" vem sem o "leave" e o aviso ficaria preso
+  $("toast").addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") pauseToast(); });
+  $("toast").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") resumeToast(); });
+  $("toast").addEventListener("focusin", pauseToast);
+  $("toast").addEventListener("focusout", resumeToast);
+  document.addEventListener("focusin", placeToast);
+  // rolar a página pode levar o campo para baixo do aviso
+  let toastScroll = 0;
+  window.addEventListener("scroll", () => { if ($("toast").hidden || toastScroll) return; toastScroll = setTimeout(() => { toastScroll = 0; placeToast(); }, 60); }, { passive: true });
   $("toastUndo").addEventListener("click", () => {
     const e = hist.toastEntry, i = e ? hist.undo.indexOf(e) : -1;
-    $("toast").hidden = true; hist.toastEntry = null;
+    hideToast();
     if (i < 0) return;
     if (i === hist.undo.length - 1) return hist.doUndo();
     hist.undo.splice(i, 1);                     // ação mais antiga que a última: desfaz só ela
