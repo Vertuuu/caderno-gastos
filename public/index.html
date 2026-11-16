@@ -12,7 +12,7 @@
     let look = JSON.parse(localStorage.getItem("caderno-look") || "null");
     if (!look) { const t = localStorage.getItem("caderno-tema"); look = { mode: t === "light" ? "claro" : t === "dark" ? "escuro" : "sistema" }; }
     const mode = look.mode || "sistema";
-    de.dataset.theme = mode === "escuro" || (mode === "sistema" && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    de.dataset.theme = look.theme === "carmesim" || mode === "escuro" || (mode === "sistema" && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
     de.dataset.tema = look.theme || "azul";
     de.dataset.texto = look.text || "m";
     de.dataset.cantos = look.corners || "suaves";
@@ -94,6 +94,19 @@
   --head-mix: 34%; --head-ink: oklch(.96 .012 var(--h)); --total-k: 100%; --tot-k: 45%; --card-k: 0%; --row-k: 0%;
   --shadow: 0 0 0 1px rgb(255 255 255 / .04), 0 2px 4px -1px rgb(0 0 0 / .4), 0 12px 28px -10px rgb(0 0 0 / .75);
   color-scheme: dark;
+}
+/* Carmesim gótico: sempre escuro (forçado no JS), preto puro e cores fixas; os tons das tabelas seguem o matiz 20 */
+:root[data-tema="carmesim"][data-theme="dark"] {
+  --h: 20; --hs: .25;
+  --bg: #000; --surface: #0e0e0e; --sunk: #070707;
+  --ink: #f2f2f2; --muted: #9a9a9a; --faint: #8c8c8c;
+  --line: #262626; --hair: #1a1a1a;
+  --brand: #7a0010; --brand-ink: #f2f2f2;
+  --focus: #f0143c; --on-accent: #000;   /* texto preto: legível no carmesim, no prata (entrada) e no vermelho (saída) */
+  --earn: #cfcfcf; --earn-soft: #1c1c1c;
+  --spend: #ff3355; --spend-soft: #2a0a10;
+  --kd: .3; --kc: 1.6;   /* tons das tabelas mais saturados (carmesim, não salmão); --kd .3 mantém >= 4,5:1 nos fundos */
+  --shadow: 0 0 0 1px rgb(255 255 255 / .05), 0 2px 4px -1px rgb(0 0 0 / .6), 0 12px 28px -10px rgb(0 0 0 / .9);
 }
 :root[data-texto="p"] { --fs: .9; }
 :root[data-texto="g"] { --fs: 1.15; }
@@ -849,14 +862,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // Aparência (iguais às de server.js). Vale para todos os aparelhos; campo ausente = padrão.
   const LOOK_DEFAULT = { theme: "azul", mode: "sistema", text: "m", corners: "suaves", cols: "auto" };
   const LOOK_OPTS = {
-    theme: [["azul", "Azul"], ["vermelho", "Vermelho"], ["rosa", "Rosa"], ["verde", "Verde"], ["roxo", "Roxo"]],
+    theme: [["azul", "Azul"], ["vermelho", "Vermelho"], ["rosa", "Rosa"], ["verde", "Verde"], ["roxo", "Roxo"], ["carmesim", "Carmesim gótico"]],
     mode: [["claro", "Claro"], ["sistema", "Sistema"], ["escuro", "Escuro"]],
     text: [["p", "P"], ["m", "M"], ["g", "G"]],
     corners: [["retos", "Retos"], ["suaves", "Suaves"], ["redondos", "Redondos"]],
     cols: [["auto", "Auto"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]],
   };
-  const THEME_HUE = { azul: 262, vermelho: 27, rosa: 355, verde: 158, roxo: 300 };
-  const THEME_SPREAD = { vermelho: .25 };   // igual ao --hs do CSS (padrão 1)
+  const THEME_HUE = { azul: 262, vermelho: 27, rosa: 355, verde: 158, roxo: 300, carmesim: 20 };
+  const THEME_SPREAD = { vermelho: .25, carmesim: .25 };   // igual ao --hs do CSS (padrão 1)
   // tons das tabelas: [claridade no claro, croma, desvio do matiz] — o mesmo cálculo de --k0…--k9 no CSS
   const TONES = [[.5, .15, 0], [.4, .14, -15], [.52, .13, 15], [.36, .11, 30], [.46, .15, -30], [.53, .11, 40], [.43, .12, -40], [.38, .15, 6], [.52, .09, -8], [.45, .045, 0]];
   const toneOf = (theme, i) => { const [l, c, d] = TONES[i % KCOUNT]; return `oklch(calc(${l} + var(--kd)) calc(${c} * var(--kc)) ${(THEME_HUE[theme] ?? 262) + d * (THEME_SPREAD[theme] ?? 1)})`; };
@@ -3099,7 +3112,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   function applyLook() {
     const look = lookOf(), de = document.documentElement;
-    const dark = look.mode === "escuro" || (look.mode === "sistema" && matchMedia("(prefers-color-scheme: dark)").matches);
+    const dark = look.theme === "carmesim" || look.mode === "escuro" || (look.mode === "sistema" && matchMedia("(prefers-color-scheme: dark)").matches);
     de.dataset.theme = dark ? "dark" : "light";
     de.dataset.tema = look.theme; de.dataset.texto = look.text; de.dataset.cantos = look.corners; de.dataset.cols = look.cols;
     try { localStorage.setItem("caderno-look", JSON.stringify(look)); localStorage.removeItem("caderno-tema"); } catch (e) {}
@@ -3138,7 +3151,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         el("div", { class: "themes" }, ...LOOK_OPTS.theme.map(([t, name]) =>
           el("button", { type: "button", "data-lk": `theme:${t}`, "aria-pressed": String(look.theme === t), onclick: () => setLook("theme", t) },
             el("i", { "aria-hidden": "true", style: `--a: ${toneOf(t, 2)}; --b: ${toneOf(t, 3)}` }), name)))),
-      seg("mode", "Claro ou escuro"), seg("text", "Tamanho do texto"), seg("corners", "Cantos"),
+      seg("mode", "Claro ou escuro"),
+      ...(look.theme === "carmesim" ? [el("p", { class: "note" }, "O Carmesim gótico é sempre escuro.")] : []),
+      seg("text", "Tamanho do texto"), seg("corners", "Cantos"),
       seg("cols", "Cards por linha (computador)", "cols-only"),
       el("p", { class: "note" }, "Vale para todos os aparelhos."));
     if (keepFocus) { const b = body.querySelector(`[data-lk="${keepFocus}"]`); if (b) b.focus({ preventScroll: true }); }
