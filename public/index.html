@@ -405,6 +405,24 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 .fc-line.neg { stroke: var(--spend); }
 .fc-area { fill: var(--focus); opacity: .1; }
 .fc-area.neg { fill: var(--spend); opacity: .14; }
+.fc-bar { fill: var(--focus); opacity: .78; }
+.fc-pt { fill: var(--focus); }
+.fc-bar.neg, .fc-pt.neg { fill: var(--spend); opacity: 1; }
+.fc-style { justify-self: end; display: flex; gap: 2px; padding: 3px; margin-bottom: -6px; border-radius: calc(10px * var(--rk)); background: var(--sunk); border: 1px solid var(--hair); }
+.fc-style button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--muted); min-height: 30px; padding: 3px 9px; border-radius: calc(7px * var(--rk)); font: inherit; font-size: calc(12.5px * var(--fs)); font-weight: 500; cursor: pointer; }
+.fc-style button:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.fc-style button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 18%, transparent); }
+.fc-style button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.fc-style svg { width: 22px; height: 13px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.fc-style button[aria-pressed="true"] svg { stroke: var(--focus); }
+.fc-style svg circle { fill: currentColor; stroke: none; }
+.fc-style button[aria-pressed="true"] svg circle { fill: var(--focus); }
+@media (max-width: 640px) {
+  .fc-style { justify-self: stretch; margin-bottom: 0; }
+  .fc-style button { flex: 1 1 0; justify-content: center; min-height: 40px; padding-inline: 4px; }
+  .fc-style button span { display: none; }
+  .fc-style svg { width: 26px; height: 15px; }
+}
 .fc-today { stroke: var(--muted); stroke-width: 1; }
 .fc-today-lab { font-family: inherit; font-weight: 600; }
 .fc-dot { fill: var(--focus); stroke: var(--surface); stroke-width: 2; }
@@ -860,13 +878,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
   const KCOUNT = 10;
   // Aparência (iguais às de server.js). Vale para todos os aparelhos; campo ausente = padrão.
-  const LOOK_DEFAULT = { theme: "azul", mode: "sistema", text: "m", corners: "suaves", cols: "auto" };
+  const LOOK_DEFAULT = { theme: "azul", mode: "sistema", text: "m", corners: "suaves", cols: "auto", chart: "degraus" };
   const LOOK_OPTS = {
     theme: [["azul", "Azul"], ["vermelho", "Vermelho"], ["rosa", "Rosa"], ["verde", "Verde"], ["roxo", "Roxo"], ["carmesim", "Carmesim gótico"]],
     mode: [["claro", "Claro"], ["sistema", "Sistema"], ["escuro", "Escuro"]],
     text: [["p", "P"], ["m", "M"], ["g", "G"]],
     corners: [["retos", "Retos"], ["suaves", "Suaves"], ["redondos", "Redondos"]],
     cols: [["auto", "Auto"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]],
+    chart: [["degraus", "Degraus"], ["linhas", "Linhas"], ["curvas", "Curvas"], ["pontos", "Pontos"], ["barras", "Barras"]],   // formato do gráfico da previsão
   };
   const THEME_HUE = { azul: 262, vermelho: 27, rosa: 355, verde: 158, roxo: 300, carmesim: 20 };
   const THEME_SPREAD = { vermelho: .25, carmesim: .25 };   // igual ao --hs do CSS (padrão 1)
@@ -1703,6 +1722,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const svg = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v); return e; };
   const niceStep = (range, n) => { const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
 
+  const fcStyleOf = () => { const v = lookOf().chart; return LOOK_OPTS.chart.some(([k]) => k === v) ? v : "degraus"; };
+  // miniaturas do seletor de formato (mesma série nos cinco)
+  const FC_ICONS = {
+    degraus: '<path d="M1 4h5v4h6v-3h5v6h6"/>',
+    linhas: '<path d="M2 4l5 4 6-3 5 6 4-2"/>',
+    curvas: '<path d="M2 4c2.5 0 3 4 5 4s3.5-3 6-3 3 6 5 6 2.5-2 4-2"/>',
+    pontos: '<circle cx="2.5" cy="4" r="1.4"/><circle cx="7" cy="8" r="1.4"/><circle cx="12" cy="5" r="1.4"/><circle cx="17" cy="11" r="1.4"/><circle cx="21.5" cy="9" r="1.4"/>',
+    barras: '<path d="M2.5 13V4M7 13V8M12 13V5M17 13v-2M21.5 13V9"/>',
+  };
+  let fcStyleFocus = null;   // o botão do formato volta a ter o foco depois de redesenhar
+  document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-fcs]"); if (b) fcStyleFocus = b.dataset.fcs; }, true);
+
   function renderForecast() {
     const box = $("forecast"), mid = state.selected, m = state.months[mid];
     if (!m || !m.entries.length) { box.hidden = true; box.replaceChildren(); return; }
@@ -1761,6 +1792,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         usePrev);
     }
 
+    // formato do gráfico: desenho miniatura de cada um + nome (no celular, só o desenho)
+    const cur = fcStyleOf();
+    const styleBar = el("div", { class: "fc-style", role: "group", "aria-label": "Formato do gráfico" },
+      ...LOOK_OPTS.chart.map(([v, name]) => {
+        const ic = svg("svg", { viewBox: "0 0 24 14", "aria-hidden": "true" });
+        ic.innerHTML = FC_ICONS[v];
+        return el("button", { type: "button", "data-fcs": v, title: name, "aria-label": name, "aria-pressed": String(cur === v), onclick: () => setLook("chart", v) }, ic, el("span", {}, name));
+      }));
     const chart = el("div", { class: "fc-chart" });
     const note = f.undated
       ? el("p", { class: "small" }, f.undated === 1
@@ -1781,8 +1820,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     box.replaceChildren(
       el("div", { class: "fc-head" }, el("h2", { id: "fcTitle" }, "Previsão do saldo"), el("span", { class: "small" }, monthLabel(mid)),
         el("button", { class: "btn ghost fc-toggle", type: "button", onclick: () => setForecastOn(false) }, "Ocultar")),
-      ...[figs, warn, chart, note, opening, table].filter(Boolean));
+      ...[figs, warn, styleBar, chart, note, opening, table].filter(Boolean));
     drawForecast(chart, f);
+    if (fcStyleFocus) { const b = styleBar.querySelector(`[data-fcs="${fcStyleFocus}"]`); fcStyleFocus = null; if (b) b.focus({ preventScroll: true }); }
   }
 
   // liga/desliga a previsão do saldo (salva nas tabelas: vale para todos os aparelhos e entra no desfazer)
@@ -1806,7 +1846,28 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     render();
   }
 
-  // Gráfico em degraus do saldo: linha de 2px, faixa abaixo de zero em vermelho, marcador do menor saldo,
+  // curva suave que passa por todos os pontos sem inventar picos entre eles (cúbica monotônica)
+  function smoothPath(p) {
+    const n = p.length;
+    if (n < 3) return p.map(([a, b], i) => `${i ? "L" : "M"} ${a} ${b}`).join(" ");
+    const m = [], t = [];
+    for (let i = 0; i < n - 1; i++) m.push((p[i + 1][1] - p[i][1]) / (p[i + 1][0] - p[i][0]));
+    t[0] = m[0]; t[n - 1] = m[n - 2];
+    for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+    for (let i = 0; i < n - 1; i++) {
+      if (m[i] === 0) { t[i] = t[i + 1] = 0; continue; }
+      const a = t[i] / m[i], b = t[i + 1] / m[i], q = a * a + b * b;
+      if (q > 9) { const k = 3 / Math.sqrt(q); t[i] = k * a * m[i]; t[i + 1] = k * b * m[i]; }
+    }
+    let d = `M ${p[0][0]} ${p[0][1]}`;
+    for (let i = 0; i < n - 1; i++) {
+      const h = (p[i + 1][0] - p[i][0]) / 3;
+      d += ` C ${p[i][0] + h} ${p[i][1] + t[i] * h} ${p[i + 1][0] - h} ${p[i + 1][1] - t[i + 1] * h} ${p[i + 1][0]} ${p[i + 1][1]}`;
+    }
+    return d;
+  }
+
+  // Gráfico do saldo (degraus, linhas, curvas, pontos ou barras): linha de 2px, faixa abaixo de zero em vermelho, marcador do menor saldo,
   // linha de "hoje" e mira com dica ao passar o mouse (ou setas do teclado).
   function drawForecast(host, f) {
     const W = Math.max(280, host.clientWidth || 600), H = W < 500 ? 170 : 200;
@@ -1833,14 +1894,28 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     // eixo x
     const ticks = [...new Set([1, 5, 10, 15, 20, 25, f.last])].filter(d => d <= f.last && (d === f.last || f.last - d >= 3));
     for (const d of ticks) { const t = svg("text", { x: x(d), y: H - 6, class: "fc-axis", "text-anchor": d === 1 ? "start" : d === f.last ? "end" : "middle" }); t.textContent = String(d); s.append(t); }
-    // linha em degraus (o saldo muda no dia e fica até o próximo)
-    let dLine = `M ${x(1)} ${y(f.days[0].bal)}`;
-    for (let i = 1; i < f.days.length; i++) dLine += ` H ${x(f.days[i].d)} V ${y(f.days[i].bal)}`;
-    const dArea = `${dLine} V ${y0} H ${x(1)} Z`;
-    s.append(svg("path", { d: dArea, class: "fc-area", "clip-path": `url(#${uid2}a)` }));
-    s.append(svg("path", { d: dArea, class: "fc-area neg", "clip-path": `url(#${uid2}b)` }));
-    s.append(svg("path", { d: dLine, class: "fc-line", "clip-path": `url(#${uid2}a)` }));
-    s.append(svg("path", { d: dLine, class: "fc-line neg", "clip-path": `url(#${uid2}b)` }));
+    // o saldo de cada dia, no formato escolhido (o trecho abaixo de zero sai em vermelho)
+    const kind = fcStyleOf(), pts = f.days.map(r => [x(r.d), y(r.bal)]);
+    const both = (make) => { s.append(make("", `url(#${uid2}a)`)); s.append(make(" neg", `url(#${uid2}b)`)); };
+    if (kind === "barras" || kind === "pontos") {
+      const g = svg("g", { class: kind === "barras" ? "fc-bars" : "fc-pts" });
+      const bw = Math.max(2, (W - pad.l - pad.r) / Math.max(1, f.last - 1) * .62), pr = W < 500 ? 2.6 : 3.2;
+      f.days.forEach((r, i) => {
+        const [px, py] = pts[i], neg = r.bal < 0 ? " neg" : "";
+        g.append(kind === "barras"
+          ? svg("rect", { x: px - bw / 2, y: Math.min(py, y0), width: bw, height: Math.max(1, Math.abs(y0 - py)), rx: Math.min(2, bw / 4), class: "fc-bar" + neg })
+          : svg("circle", { cx: px, cy: py, r: pr, class: "fc-pt" + neg }));
+      });
+      s.append(g);
+    } else {
+      let dLine = `M ${pts[0][0]} ${pts[0][1]}`;
+      if (kind === "linhas") for (let i = 1; i < pts.length; i++) dLine += ` L ${pts[i][0]} ${pts[i][1]}`;
+      else if (kind === "curvas") dLine = smoothPath(pts);
+      else for (let i = 1; i < pts.length; i++) dLine += ` H ${pts[i][0]} V ${pts[i][1]}`;   // degraus: o saldo muda no dia e fica até o próximo
+      const dArea = `${dLine} V ${y0} H ${x(1)} Z`;
+      both((neg, cp) => svg("path", { d: dArea, class: "fc-area" + neg, "clip-path": cp }));
+      both((neg, cp) => svg("path", { d: dLine, class: "fc-line" + neg, "clip-path": cp }));
+    }
     // hoje
     if (f.today) {
       s.append(svg("line", { x1: x(f.today), x2: x(f.today), y1: pad.t - 6, y2: H - pad.b, class: "fc-today" }));
@@ -3136,7 +3211,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     applyLook();
     store.saveSettings();
     const label = (LOOK_OPTS[k].find(([x]) => x === v) || [, v])[1];
-    hist.label({ theme: `Tema ${label}`, mode: `Modo ${label.toLowerCase()}`, text: `Texto ${label}`, corners: `Cantos ${label.toLowerCase()}`, cols: `Cards por linha: ${label}` }[k]);
+    hist.label({ theme: `Tema ${label}`, mode: `Modo ${label.toLowerCase()}`, text: `Texto ${label}`, corners: `Cantos ${label.toLowerCase()}`, cols: `Cards por linha: ${label}`, chart: `Gráfico da previsão: ${label.toLowerCase()}` }[k]);
     render();
   }
   // conteúdo do painel (o mesmo no topo e no menu do celular)
