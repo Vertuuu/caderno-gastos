@@ -21,7 +21,7 @@ const TABLE_SORTS = ["manual", "az", "za", "vdesc", "vasc", "count"];
 const ITEM_SORTS = ["date", "date_desc", "az", "za", "vdesc", "vasc"];
 // aparência (iguais às de index.html): tema, claro/escuro, tamanho do texto, cantos e cards por linha
 const LOOK = { theme: ["azul", "vermelho", "rosa", "verde", "roxo", "carmesim"], mode: ["claro", "sistema", "escuro"], text: ["p", "m", "g"],
-  corners: ["retos", "suaves", "redondos"], cols: ["auto", "2", "3", "4", "5"] };
+  corners: ["retos", "suaves", "redondos"], cols: ["auto", "2", "3", "4", "5"], chart: ["degraus", "linhas", "curvas", "pontos", "barras"] };
 const MAX_VALUE = 1e9;         // R$ 1 bilhão por registro
 const KEEP_DAILY_DAYS = 30;    // backups diários mantidos
 const KEEP_SAFETY = 20;        // backups "antes de apagar" mantidos
