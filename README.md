@@ -128,6 +128,8 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 
 4. **Ligue o app de novo** e **recarregue a página** no navegador de cada aparelho, inclusive no celular.
 
+> **Atalho:** em vez do passo 3, dê dois cliques no `atualizar.bat`. Ele acha sozinho a pasta do app (mesmo que você o copie para a Área de Trabalho), roda o `git pull` na `main` e avisa se precisa religar o app. Não mexe na pasta `dados`.
+
 ### Cuidados
 
 - **Nunca rode `git clean -x`** (nem `-fdx`): esse comando apaga os arquivos que o Git ignora, e isso inclui a pasta `dados`.
