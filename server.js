@@ -51,6 +51,17 @@ function normalize(raw, problems) {
   out.settings.rules = isObj(d.settings) && Array.isArray(d.settings.rules) ? d.settings.rules.filter(r => isObj(r) && typeof r.id === "string" && typeof r.match === "string") : [];
   // previsão do saldo ligada (opcional; sem o campo, fica desligada)
   if (isObj(d.settings) && typeof d.settings.forecast === "boolean") out.settings.forecast = d.settings.forecast;
+  // ordem das tabelas e aparência: mantém só as opções válidas (sem isso, voltavam ao padrão ao religar o servidor)
+  for (const [key, opts] of [["tableSort", { income: TABLE_SORTS, expense: TABLE_SORTS }], ["look", LOOK]]) {
+    const src = isObj(d.settings) ? d.settings[key] : undefined;
+    if (src === undefined) continue;
+    if (!isObj(src)) { problems.push(`${key} inválido descartado`); continue; }
+    out.settings[key] = {};
+    for (const [k, v] of Object.entries(src)) {
+      if (opts[k] && opts[k].includes(v)) out.settings[key][k] = v;
+      else problems.push(`${key}.${k} inválido descartado`);
+    }
+  }
   if (isObj(d.months)) {
     for (const [id, m] of Object.entries(d.months)) {
       if (!MONTH_RE.test(id) || !isObj(m) || !Array.isArray(m.entries)) { problems.push(`mês ${id} inválido descartado`); continue; }
