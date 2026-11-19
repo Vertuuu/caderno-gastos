@@ -219,6 +219,53 @@ def find_node():
     return None
 
 
+# ---------- Atualizar o app (git) ----------
+# O mesmo que o atualizar.bat faz, mas para a pasta deste painel. A pasta dados/ é ignorada pelo Git.
+GITHUB_REPO = "Vertuuu/caderno-gastos"
+
+
+def git(*args, timeout=60):
+    """Roda o git na pasta do app, sem janela e sem pedir senha. Devolve (código, saída)."""
+    from shutil import which
+    exe = which("git")
+    if not exe:
+        return None, ""
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+    try:
+        r = subprocess.run([exe, "-C", str(ROOT), *args], capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=timeout, creationflags=NO_WINDOW, env=env, stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return -1, "o Git demorou demais para responder"
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def check_update():
+    """(fora da janela) Confere no GitHub se há versão nova da main.
+    Devolve {"status": "nogit" | "noclone" | "offline" | "ok", "behind": n, "branch": nome}."""
+    import re
+    code, _ = git("--version", timeout=10)
+    if code is None:
+        return {"status": "nogit"}
+    code, url = git("remote", "get-url", "origin", timeout=10)
+    if code != 0 or not re.search(r"[/:]" + re.escape(GITHUB_REPO) + r"(\.git)?/?$", url, re.I):
+        return {"status": "noclone"}
+    code, out = git("fetch", "-q", "origin", "main", timeout=40)
+    if code != 0:
+        return {"status": "offline", "out": out}
+    code, n = git("rev-list", "--count", "main..origin/main", timeout=10)
+    _, branch = git("rev-parse", "--abbrev-ref", "HEAD", timeout=10)
+    return {"status": "ok", "behind": int(n) if code == 0 and n.isdigit() else 0, "branch": branch}
+
+
+def apply_update(branch):
+    """(fora da janela) Traz a main do GitHub, só se der para avançar sem mesclar. Devolve (ok, saída)."""
+    if branch == "main":
+        code, out = git("merge", "--ff-only", "origin/main")
+    else:   # pasta em outra branch: atualiza a main sem trocar de branch
+        code, out = git("fetch", "origin", "main:main", timeout=40)
+    return code == 0, out
+
+
 # ---------- Atalhos do Windows ----------
 def pythonw():
     exe = Path(sys.executable)
@@ -293,6 +340,8 @@ class App:
         self.checking = False
         self.opened_once = False
         self.start_minimized = start_minimized
+        self.update_info = None     # resultado da última consulta ao GitHub (check_update)
+        self.updating = False       # verificando ou aplicando uma atualização
 
         root.title(APP_NAME)
         root.configure(bg=C["bg"])
@@ -392,6 +441,8 @@ class App:
         self.open_btn.pack(side="left", fill="x", expand=True)
         self.toggle_btn = self.button(btns, "Desligar", self.toggle)
         self.toggle_btn.pack(side="left", padx=(10, 0))
+        self.update_btn = self.button(btns, "Atualizar", self.on_update)
+        self.update_btn.pack(side="left", padx=(10, 0))
 
         # opções
         opts = tk.Frame(body, bg=C["bg"])
@@ -472,6 +523,7 @@ class App:
             "parando": ("Desligando…", C["amber"]),
             "parado": ("Servidor desligado", C["muted"]),
             "erro": ("Não foi possível ligar", C["red"]),
+            "atualizando": ("Atualizando…", C["amber"]),
         }[state]
         self.status_lbl.configure(text=look[0], fg=C["ink"] if state != "erro" else C["red"])
         self.dot.itemconfigure(self.dot_id, fill=look[1])
@@ -487,6 +539,7 @@ class App:
         else:
             self.toggle_btn.configure(state="disabled")
         self.toggle_btn.configure(disabledforeground=C["muted"])
+        self.render_update_btn()
         self.status_text = sub
         self.render_addresses(on)
         if on:
@@ -562,6 +615,7 @@ class App:
             self.root.iconify()
         self.bg(fix_startup_shortcut, lambda msg: msg and self.write_log(msg))
         self.bg(lambda: server_info(self.port), self.on_boot_info)
+        self.bg(check_update, self.on_update_info)   # só avisa no botão; não atualiza sozinho
 
     def on_boot_info(self, info):
         if info is not None:
@@ -626,8 +680,11 @@ class App:
 
     def on_ready(self, res):
         if res == "ok":
-            self.set_status("ativo", "Pode usar no navegador deste computador ou de qualquer aparelho na mesma rede Wi-Fi.")
-            if self.var_open.get() and not self.opened_once and not self.start_minimized:
+            self.set_status("ativo", "App atualizado. Recarregue a página em cada aparelho, inclusive no celular."
+                            if "--atualizado" in sys.argv and not self.opened_once else
+                            "Pode usar no navegador deste computador ou de qualquer aparelho na mesma rede Wi-Fi.")
+            # depois de atualizar, as páginas já abertas só precisam ser recarregadas: não abre outra aba
+            if self.var_open.get() and not self.opened_once and not self.start_minimized and "--atualizado" not in sys.argv:
                 self.open_browser()
             self.opened_once = True
             self.watch()
@@ -711,6 +768,110 @@ class App:
     def open_browser(self):
         webbrowser.open(f"http://localhost:{self.port}")
 
+    # ----- atualizar -----
+    def render_update_btn(self):
+        """Botão Atualizar: em destaque quando o GitHub tem versão nova; parado enquanto algo está em andamento."""
+        news = (self.update_info or {}).get("behind", 0)
+        busy = self.updating or self.state in ("iniciando", "parando", "atualizando")
+        bg, fg = (C["focus"], C["card"]) if news else (C["card"], C["ink"])
+        self.update_btn.configure(text="Aguarde…" if self.updating else "Atualizar ●" if news else "Atualizar",
+                                  state="disabled" if busy else "normal", bg=bg, fg=fg, activebackground=bg,
+                                  activeforeground=fg, disabledforeground=C["muted"], cursor="arrow" if busy else "hand2")
+
+    def on_update_info(self, info):
+        self.update_info = info
+        if info.get("status") == "ok" and info.get("behind"):
+            self.write_log("[tem versão nova do app: clique em Atualizar]")
+        self.render_update_btn()
+
+    def on_update(self):
+        if self.updating:
+            return
+        self.updating = True
+        self.render_update_btn()
+        self.bg(check_update, self.on_update_checked)
+
+    def end_update(self):
+        self.updating = False
+        self.render_update_btn()
+
+    def on_update_checked(self, info):
+        self.update_info = info
+        problem = {
+            "nogit": "Para atualizar por aqui, o Git precisa estar instalado neste computador.\n\n"
+                     "Instale em git-scm.com/download/win e abra o painel de novo.",
+            "noclone": "Esta pasta não foi baixada com o git clone (por exemplo, veio do ZIP), "
+                       "então não dá para atualizar por aqui.\n\nO README explica como atualizar sem perder a pasta dados.",
+            "offline": "Não consegui falar com o GitHub. Confira a internet e tente de novo.",
+        }.get(info.get("status"))
+        if problem:
+            if info.get("out"):
+                self.write_log(info["out"])
+            self.end_update()
+            messagebox.showwarning(APP_NAME, problem)
+            return
+        news, branch = info["behind"], info["branch"]
+        if not news:
+            self.end_update()
+            messagebox.showinfo(APP_NAME, "O app já está na versão mais nova.")
+            return
+        if branch != "main":   # pasta de quem mexe no código: só atualiza a main, sem desligar nada
+            if not messagebox.askyesno(APP_NAME, f"Tem versão nova na main.\n\nEsta pasta está na branch \"{branch}\": "
+                                                 "a main será atualizada sem trocar de branch, e o app continua como está.\n\nAtualizar a main?"):
+                return self.end_update()
+            self.bg(lambda: apply_update(branch), lambda res: self.on_updated(res, branch, False))
+            return
+        if not messagebox.askyesno(APP_NAME, "Tem versão nova do app.\n\nO servidor desliga por alguns segundos (salvando tudo), "
+                                             "o app é atualizado e o painel abre de novo, já ligado. Seus dados não mudam.\n\nAtualizar agora?"):
+            return self.end_update()
+        was_on = self.state in ("ativo", "externo")
+        if was_on:
+            self.stop(then=lambda: self.run_update(was_on))
+        else:
+            self.run_update(was_on)
+
+    def run_update(self, was_on):
+        if self.state in ("ativo", "externo"):   # não deu para desligar o servidor de outra janela
+            self.end_update()
+            messagebox.showwarning(APP_NAME, "Não consegui desligar o servidor para atualizar. Feche a outra janela "
+                                             "(por exemplo a do iniciar.bat) e tente de novo.")
+            return
+        self.set_status("atualizando", "Baixando a versão nova…")
+        self.bg(lambda: apply_update("main"), lambda res: self.on_updated(res, "main", was_on))
+
+    def on_updated(self, res, branch, was_on):
+        ok, out = res
+        if out:
+            self.write_log(out)
+        if not ok:
+            self.end_update()
+            if branch == "main":
+                self.set_status("parado", "Clique em Ligar para usar o site de novo.")
+                if was_on:
+                    self.start()
+            if not self.log_open:
+                self.toggle_log()
+            messagebox.showerror(APP_NAME, "A atualização não terminou e nada foi alterado. Seus dados continuam salvos.\n\n"
+                                           "O mais comum é algum arquivo do app ter sido editado nesta pasta. "
+                                           "A mensagem do Git está no registro.")
+            return
+        if branch != "main":
+            self.update_info = {"status": "ok", "behind": 0, "branch": branch}
+            self.end_update()
+            messagebox.showinfo(APP_NAME, "A main foi atualizada.")
+            return
+        self.restart_panel()
+
+    def restart_panel(self):
+        """O próprio painel pode ter mudado: abre a versão nova (que liga o servidor) e fecha esta."""
+        release_single_instance()
+        try:
+            subprocess.Popen([pythonw(), str(Path(__file__).resolve()), "--atualizado"], cwd=ROOT)
+        except OSError as e:
+            log_error("Erro ao reabrir o painel", str(e))
+            messagebox.showinfo(APP_NAME, "O app foi atualizado. Abra o painel de novo para ligar o servidor.")
+        self.root.destroy()
+
     # ----- opções -----
     def on_open_pref(self):
         self.cfg["open_browser"] = bool(self.var_open.get())
@@ -735,7 +896,7 @@ class App:
             messagebox.showerror(APP_NAME, f"Não consegui criar o atalho.\n\n{e}")
 
     def on_close(self):
-        if self.state == "parando":
+        if self.state in ("parando", "atualizando"):
             return
         # pergunta sempre que o node aberto por este painel ainda estiver rodando (qualquer estado)
         if self.proc and self.proc.poll() is None:
@@ -789,6 +950,18 @@ def already_running():
         return True
     except Exception:
         return False
+
+
+def release_single_instance():
+    """Solta a trava de instância única, para o painel reaberto depois de atualizar não achar que este segue aberto."""
+    global _MUTEX
+    if _MUTEX:
+        try:
+            import ctypes
+            ctypes.windll.kernel32.CloseHandle(_MUTEX)
+        except Exception:
+            pass
+        _MUTEX = None
 
 
 def fix_startup_shortcut():

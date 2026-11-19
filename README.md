@@ -53,6 +53,7 @@ Abra a pasta `caderno-gastos` e escolha um dos jeitos:
 - liga o app sem janela preta de terminal e mostra quando ele está **ativo**;
 - mostra os endereços para abrir no computador e no celular, com botão de copiar;
 - tem os botões **Abrir no navegador** e **Ligar/Desligar** (desligar salva tudo antes). Se o app já estava ligado pelo `iniciar.bat`, o **Desligar** do painel também desliga ele;
+- tem o botão **Atualizar**, que fica em destaque (**Atualizar ●**) quando sai versão nova e atualiza o app com um clique (veja [Atualizar](#2-atualizar-para-a-versão-mais-nova));
 - cria um **atalho na Área de Trabalho** e pode **ligar junto com o Windows**, já minimizado (se você mudar a pasta de lugar, o atalho de inicialização é corrigido sozinho na próxima vez que o painel abrir);
 - tem tema claro, escuro ou igual ao Windows.
 
@@ -117,6 +118,10 @@ O app só atende a rede local. Para abrir de fora (4G, outra casa), instale uma 
 ## 2. Atualizar para a versão mais nova
 
 Quando houver novidades aqui no repositório, você pode trazê-las para o seu app. **Atualizar não apaga os seus dados**: a pasta `dados/` e as preferências do painel (`app/config.json`) não fazem parte do repositório, então o Git não mexe nelas.
+
+**Pelo painel (mais fácil):** quando houver versão nova, o botão **Atualizar** fica em destaque (**Atualizar ●**). Clique nele e confirme: o painel desliga o servidor (salvando tudo), atualiza o app e abre de novo, já ligado. Depois, **recarregue a página** em cada aparelho, inclusive no celular. Precisa do Git instalado e da pasta baixada com `git clone`.
+
+**Sem o painel:**
 
 1. **(Opcional, recomendado)** Copie a pasta `dados` para outro lugar, como cópia de segurança.
 2. **Desligue o app**: botão **Desligar** no painel, ou feche a janela do `iniciar.bat`.
