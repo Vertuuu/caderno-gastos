@@ -107,6 +107,11 @@ svg:has(.is-hot) .mark:not(.is-hot) { opacity: .45; }
 .ctable .r { text-align: right; }
 .ctable .muted { color: var(--muted); }
 .ctable .neg { color: var(--spend); } .ctable .pos { color: var(--earn); }
+.ttrend { min-width: 720px; }
+.ttrend td { vertical-align: middle; }
+.ttrend .spark { display: block; }
+.ttrend .nowrap { white-space: nowrap; }
+.ttrend [data-tip]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
 .tname { display: inline-flex; align-items: center; gap: 8px; }
 .tname i { width: 10px; height: 10px; border-radius: calc(3px * var(--rk)); flex: none; }
 

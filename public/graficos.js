@@ -8,14 +8,14 @@
   const MONTHS_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
   // Preferências guardadas neste aparelho; valores desconhecidos voltam ao padrão.
-  const ALLOWED = { period: ["month", "semester", "year"], data: ["expense", "income", "all"], comp: ["donut", "bars", "columns"], evo: ["stacked", "lines"] };
-  const cs = { period: "month", key: null, data: "expense", comp: "donut", evo: "stacked" };
+  const ALLOWED = { period: ["month", "semester", "year"], data: ["expense", "income", "all"], comp: ["donut", "bars", "columns"], evo: ["stacked", "lines"], rank: ["total", "freq"] };
+  const cs = { period: "month", key: null, data: "expense", comp: "donut", evo: "stacked", rank: "total" };
   (() => {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) {}
     for (const [k, list] of Object.entries(ALLOWED)) if (list.includes(saved[k])) cs[k] = saved[k];
   })();
-  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ period: cs.period, data: cs.data, comp: cs.comp, evo: cs.evo })); } catch (e) {} };
+  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify({ period: cs.period, data: cs.data, comp: cs.comp, evo: cs.evo, rank: cs.rank })); } catch (e) {} };
 
   let api = null;
   const $ = (id) => document.getElementById(id);
@@ -86,6 +86,27 @@
     }
     return items;
   }
+
+  // Cada tabela ao longo dos meses: valor de cada mês, total, nº de lançamentos e em quantos meses aparece.
+  function tableStats(months, kind) {
+    const known = new Set(api.ctxs(kind).map(c => c.id)), map = new Map();
+    months.forEach((m, i) => {
+      for (const e of (api.state.months[m] ? api.state.months[m].entries : [])) {
+        if (e.kind !== kind) continue;
+        const id = known.has(e.ctx) ? e.ctx : ORPHAN;
+        if (!map.has(id)) map.set(id, { id, kind, cents: months.map(() => 0), count: 0 });
+        const r = map.get(id); r.cents[i] += Math.round(e.value * 100); r.count++;
+      }
+    });
+    return [...map.values()].map(r => {
+      const values = r.cents.map(c => c / 100), present = values.filter(v => v > 0).length;
+      const peak = values.reduce((p, v, i) => v > values[p] ? i : p, 0);
+      const tot = api.sumMoney(values);
+      return { id: r.id, kind, label: ctxName(r.id), color: ctxColor(kind, r.id), values, total: tot, count: r.count, present, avg: present ? tot / present : 0, peak };
+    }).filter(r => r.total > 0);
+  }
+  const byTotal = (a, b) => b.total - a.total;
+  const byFreq = (a, b) => b.present - a.present || b.count - a.count || b.total - a.total;
 
   // ---------- Formatação ----------
   const pct = (v, base) => base > 0 ? v / base * 100 : 0;
@@ -396,6 +417,18 @@
         add(red ? "warn" : "good", red ? "!" : "✓", red ? `${b(String(red))} ${red === 1 ? "mês fechou" : "meses fecharam"} no vermelho neste ${plabel}${skipTxt}.` : `Nenhum mês fechou no vermelho neste ${plabel}${skipTxt}.`);
       }
     }
+    // Tabelas ao longo dos meses do semestre/ano: frequência, presença em todos os meses e gastos pontuais
+    if (period !== "month" && months.length > 1 && mode !== "income") {
+      const st = tableStats(months, "expense"), M = months.length;
+      const freq = st.slice().sort(byFreq)[0];
+      if (freq) add("info", "↻", `Tabela com mais gastos registrados: ${b(freq.label)}, em ${b(`${freq.present} de ${M} meses`)} (${freq.count} ${freq.count === 1 ? "lançamento" : "lançamentos"}, ${api.fmt(freq.total)} no total).`);
+      const always = st.filter(r => r.present === M).sort(byTotal);
+      if (always.length > 1) add("info", "≋", `Presentes em todos os meses: ${always.slice(0, 5).map(r => b(r.label)).join(", ")}${always.length > 5 ? ` e mais ${always.length - 5}` : ""}. Somam ${b(api.fmt(api.sumMoney(always.map(r => r.total))))}.`);
+      const avgTop = st.filter(r => r.present > 1).sort((a, c) => c.avg - a.avg)[0];
+      if (avgTop) add("info", "∑", `Maior gasto médio nos meses em que aparece: ${b(avgTop.label)}, ${b(api.fmt(avgTop.avg))} por mês.`);
+      const once = st.filter(r => r.present === 1).sort(byTotal)[0];
+      if (once && M >= 3) add("info", "•", `Gasto pontual: ${b(once.label)} só aparece em ${b(api.monthLabel(months[once.peak]))} (${api.fmt(once.total)}).`);
+    }
     if (!out.length) add("info", "i", "Registre entradas e gastos neste período para ver as análises.");
     return out;
   }
@@ -539,6 +572,41 @@
         el("thead", {}, el("tr", {}, el("th", {}, "Tabela"), mode === "all" ? el("th", {}, "Tipo") : null, el("th", { class: "r" }, "Valor (R$)"), byMonth ? el("th", { class: "r" }, skipped ? "Média/mês (completos)" : "Média/mês") : null, el("th", { class: "r" }, "% do tipo"), el("th", { class: "r" }, byMonth ? "Anterior (média/mês)" : "Anterior"), el("th", { class: "r" }, byMonth ? "Variação (média/mês)" : "Variação"))),
         el("tbody", {}, ...rows))) : el("p", { class: "cempty" }, "Sem registros neste período."));
 
+    // Tabelas ao longo dos meses (semestre/ano): ranking por valor ou por frequência, com o mês a mês de cada uma
+    let trendCard = null;
+    if (byMonth && months.length > 1) {
+      const kinds = mode === "all" ? ["expense", "income"] : [mode];
+      const st = kinds.flatMap(k => tableStats(months, k).sort(cs.rank === "freq" ? byFreq : byTotal));
+      const M = months.length;
+      const spark = (r) => {
+        const max = Math.max(...r.values), w = 9, gap = 3, H = 26;
+        const g = svg("svg", { viewBox: `0 0 ${M * (w + gap) - gap} ${H}`, width: M * (w + gap) - gap, height: H, class: "spark", "aria-hidden": "true" });
+        r.values.forEach((v, i) => {
+          const h = v > 0 ? Math.max(v / max * H, 2) : 2;
+          g.append(svg("rect", { x: i * (w + gap), y: H - h, width: w, height: h, rx: 1.5, fill: v > 0 ? r.color : "var(--line)" }));
+        });
+        return g;
+      };
+      const tipOf = (r) => [`${r.label}`, ...months.map((m, i) => `${shortMonth(m)}: ${r.values[i] > 0 ? api.fmt(r.values[i]) : "–"}`)].join("\n");
+      const what = mode === "income" ? "entradas" : mode === "expense" ? "gastos" : "lançamentos";
+      trendCard = el("section", { class: "ccard trend" },
+        el("header", { class: "chead" },
+          el("div", {}, el("h3", {}, "Tabelas ao longo dos meses"), el("p", {}, cs.rank === "freq" ? `Tabelas que mais aparecem nos ${M} meses do período` : `Tabelas com mais ${what} somando os ${M} meses do período`)),
+          seg("Ordenar tabelas", cs.rank, [["total", "Maior valor"], ["freq", "Mais frequentes"]], (v) => update({ rank: v }))),
+        st.length ? el("div", { class: "scrollx" }, el("table", { class: "ctable ttrend" },
+          el("thead", {}, el("tr", {}, el("th", {}, "Tabela"), mode === "all" ? el("th", {}, "Tipo") : null, el("th", {}, "Mês a mês"),
+            el("th", { class: "r" }, "Total (R$)"), el("th", { class: "r" }, "Meses"), el("th", { class: "r" }, "Lançamentos"), el("th", { class: "r" }, "Média/mês com registro"), el("th", {}, "Maior mês"))),
+          el("tbody", {}, ...st.map(r => el("tr", {},
+            el("td", {}, el("span", { class: "tname" }, el("i", { style: `background:${r.color}` }), r.label)),
+            mode === "all" ? el("td", {}, r.kind === "income" ? "Entrada" : "Gasto") : null,
+            el("td", { "data-tip": tipOf(r), tabindex: "0" }, spark(r)),
+            el("td", { class: "num r" }, api.fmtPlain(r.total)),
+            el("td", { class: "num r" }, `${r.present}/${M}`),
+            el("td", { class: "num r" }, String(r.count)),
+            el("td", { class: "num r" }, api.fmtPlain(r.avg)),
+            el("td", { class: "nowrap" }, `${shortMonth(months[r.peak])} · `, el("span", { class: "num" }, api.fmtPlain(r.values[r.peak])))))))) : el("p", { class: "cempty" }, "Sem registros neste período."));
+    }
+
     const empty = !months.length;
     root.replaceChildren(
       el("div", { class: "chartshead" }, el("h2", {}, "Gráficos")),
@@ -546,6 +614,7 @@
       empty ? el("p", { class: "cempty" }, "Nenhum mês registrado neste período.") : kpis,
       empty ? null : el("div", { class: "cgrid" }, compCard, insCard),
       empty ? null : evoCard,
+      empty ? null : trendCard,
       empty ? null : tableCard);
     if (!root.dataset.tips) { bindTips(root); root.dataset.tips = "1"; }
     if (tip) tip.hidden = true;
