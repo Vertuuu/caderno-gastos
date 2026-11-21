@@ -973,7 +973,17 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     // saldo inicial: vale o daqui se foi mudado aqui; se não, o de lá
     const opening = (base ? base.opening : undefined) !== local.opening ? local.opening : (remote ? remote.opening : undefined);
     if (remote === null && entries.length === 0) return null;
-    return opening === undefined ? { entries } : { entries, opening };
+    // tabelas excluídas só neste mês: junta as de lá com as excluídas aqui, menos as que voltaram aqui
+    const hs = (d) => new Set((d && d.hide) || []), hb = hs(base), hl = hs(local);
+    const hide = [...new Set([...hs(remote), ...hl])].filter(id => hl.has(id) || !hb.has(id));
+    return monthDoc({ entries, opening, hide });
+  }
+  // documento de um mês só com os campos usados: registros, saldo inicial e tabelas excluídas no mês
+  function monthDoc(m) {
+    const o = { entries: m.entries };
+    if (m.opening !== undefined) o.opening = m.opening;
+    if (m.hide && m.hide.length) o.hide = m.hide;
+    return o;
   }
   function docGet(key) {
     if (key === "settings") {
@@ -984,7 +994,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     if (key === "goals") return { goals: state.goals };
     if (key === "plans") return { plans: state.plans };
     const m = state.months[key.slice(2)];
-    return m ? (m.opening === undefined ? { entries: m.entries } : { entries: m.entries, opening: m.opening }) : null;
+    return m ? monthDoc(m) : null;
   }
   function docSet(key, doc) {
     if (key === "settings") {
@@ -996,7 +1006,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     }
     else if (key === "goals") state.goals = doc.goals;
     else if (key === "plans") state.plans = doc.plans;
-    else if (doc) state.months[key.slice(2)] = doc.opening === undefined ? { entries: doc.entries } : { entries: doc.entries, opening: doc.opening };
+    else if (doc) state.months[key.slice(2)] = monthDoc(doc);
     else delete state.months[key.slice(2)];
   }
   const docFromData = (d, key) => key === "settings" ? d.settings : key === "goals" ? { goals: d.goals } : key === "plans" ? { plans: d.plans || [] } : (d.months[key.slice(2)] || null);
@@ -1109,26 +1119,6 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         if (changed) render();
       }
     },
-    // Exclui uma tabela e os registros dela em todos os meses numa única operação no servidor.
-    async deleteContext(kind, id, touchedMonths) {
-      try {
-        const r = await fetch(`api/contexts/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" });
-        if (!r.ok) throw new Error(r.status);
-        const body = await r.json();
-        for (const [key, doc] of Object.entries(body.docs || {})) {
-          if (this.dirty.has(key)) { docSet(key, mergeDoc(key, this.base[key], docGet(key), doc)); hist.sync(key); }
-          this.base[key] = clone(doc);
-          this.docRev[key] = typeof body.docRev === "number" ? body.docRev : body.docRev[key];
-        }
-        if (body.prevRev === this.rev) this.rev = body.rev;
-        this.saveSeq++;
-        this.updateStatus();
-      } catch (e) {
-        // sem servidor agora: manda as versões já atualizadas deste aparelho pelo caminho normal
-        this.mark("settings");
-        touchedMonths.forEach(m => this.mark("m:" + m));
-      }
-    },
     updateStatus() {
       const waiting = this.dirty.size + this.inflight.size;
       const rej = Object.values(this.rejected);
@@ -1171,6 +1161,22 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const currentMonthId = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
   const shiftMonth = (id, n) => { let [y, m] = id.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return `${y}-${String(m).padStart(2, "0")}`; };
   const ctxs = (kind) => state.settings[kind] || [];
+  // Tabelas excluídas num mês ficam em months[m].hide e somem só daquele mês. Uma tabela excluída que
+  // ganhou registro de novo no mês (parcela, extrato) volta a aparecer.
+  const hiddenIn = (mid) => new Set((state.months[mid] && state.months[mid].hide) || []);
+  function shownCtxs(kind, mid = state.selected) {
+    const hid = hiddenIn(mid);
+    if (!hid.size) return ctxs(kind);
+    const used = new Set(((state.months[mid] && state.months[mid].entries) || []).map(e => e.ctx));
+    return ctxs(kind).filter(c => !hid.has(c.id) || used.has(c.id));
+  }
+  // um mês novo herda as exclusões do mês anterior mais recente (a tabela excluída não volta sozinha)
+  function inheritedHide(mid) {
+    const prev = monthIds().filter(x => x < mid).pop();
+    if (!prev) return [];
+    const known = new Set([...ctxs("income"), ...ctxs("expense")].map(c => c.id));
+    return [...hiddenIn(prev)].filter(id => known.has(id));
+  }
   const findCtx = (id) => { for (const k of ["income", "expense"]) { const c = ctxs(k).find(x => x.id === id); if (c) return [k, c]; } return [null, null]; };
   // Tabelas que repetem os valores no mês seguinte. Sem escolha salva, vale para "Gastos Fixos" e "Salário".
   const plainName = (s) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -1616,7 +1622,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     const lastLabel = s.last ? `${s.last.slice(8)}/${s.last.slice(5, 7)}` : "";
     const parts = [];
     if (s.missing) {
-      const sel = defaultCopySel();
+      const sel = defaultCopySel(s.cur);
       const names = [...ctxs("income"), ...ctxs("expense")].filter(c => sel.has(c.id)).map(c => c.name);
       const nInst = state.plans.filter(p => planActive(p, s.cur) && findCtx(p.ctx)[1]).length;
       parts.push(el("div", { class: "since-block" },
@@ -2007,7 +2013,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   const byName = (a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base", numeric: true });
   // empates ficam na ordem manual (tabelas) ou na data e ordem de lançamento (itens)
   function sortedCtxs(kind) {
-    const list = ctxs(kind), mode = tableSortOf(kind);
+    const list = shownCtxs(kind), mode = tableSortOf(kind);
     if (mode === "manual") return list;
     const tot = totalsBy(kind), cnt = new Map();
     entries().forEach(e => { if (e.kind === kind) cnt.set(e.ctx, (cnt.get(e.ctx) || 0) + 1); });
@@ -2075,7 +2081,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   }
   // Botão "Cor" no título da seção: um tom para todos os cards de entradas (ou de saídas) de uma vez
   function renderSecColor(kind) {
-    const isIn = kind === "income", box = $(isIn ? "ccIn" : "ccOut"), list = ctxs(kind);
+    const isIn = kind === "income", box = $(isIn ? "ccIn" : "ccOut"), list = shownCtxs(kind);
     if (list.length < 2) { if (state.secColor === kind) state.secColor = null; return box.replaceChildren(); }
     const tones = new Set(list.map(c => colorOf(kind, c)));
     const same = tones.size === 1 ? [...tones][0] : null, open = state.secColor === kind;
@@ -2463,44 +2469,51 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     return s;
   }
 
-  // Exclui a tabela e todos os registros dela, em todos os meses (com confirmação e desfazer).
+  // Exclui a tabela só do mês aberto, com os registros dela nesse mês (com confirmação e desfazer).
+  // Os outros meses continuam com a tabela e os registros. Quando a tabela não aparece em mais nenhum
+  // mês, ela sai também da lista geral de tabelas.
   async function deleteCtx(kind, id) {
-    const c0 = ctxs(kind).find(x => x.id === id);
+    const c0 = ctxs(kind).find(x => x.id === id), mid = state.selected;
     if (!c0) return;
-    const hits = monthIds().map(m => [m, state.months[m].entries.filter(e => e.ctx === id)]).filter(([, es]) => es.length);
-    const n = hits.reduce((s, [, es]) => s + es.length, 0);
-    const total = sumMoney(hits.flatMap(([, es]) => es.map(e => e.value)));
-    const metas = kind === "expense" && plainName(c0.name).trim() === "metas" && (state.goals || []).length > 0;
+    if (!state.months[mid]) return deleteCtxEverywhere(kind, id);
+    const hits = state.months[mid].entries.filter(e => e.ctx === id);
+    const n = hits.length, total = sumMoney(hits.map(e => e.value)), insts = hits.filter(e => e.inst).length;
+    const metas = kind === "expense" && plainName(c0.name).trim() === "metas" && (state.goals || []).length > 0 && n > 0;
+    const others = monthIds().filter(m => m !== mid && state.months[m].entries.some(e => e.ctx === id)).length;
     const ok = await confirmDialog({
-      title: `Excluir a tabela "${c0.name}"?`,
-      text: n
-        ? `A tabela sai de todos os meses junto com ${n === 1 ? "o registro" : `os ${n} registros`} dela, inclusive de meses diferentes do que está aberto.` +
-          (metas ? " Os registros que contam para as suas metas também serão apagados, e o progresso delas vai diminuir." : "")
-        : "A tabela não tem registros em nenhum mês e sai da lista.",
-      details: [["Registros", String(n)], ["Meses afetados", String(hits.length)], [kind === "income" ? "Total de entradas" : "Total de saídas", fmt(total)]],
+      title: `Excluir a tabela "${c0.name}" de ${monthLabel(mid)}?`,
+      text: (n ? `A tabela sai só de ${monthLabel(mid)}, junto com ${n === 1 ? "o registro" : `os ${n} registros`} dela neste mês.` : `A tabela sai só de ${monthLabel(mid)}.`) +
+        (others ? ` ${others === 1 ? "O outro mês que usa" : `Os outros ${others} meses que usam`} essa tabela continuam como estão.` : "") +
+        (insts ? ` ${insts === 1 ? "A parcela deste mês é apagada" : "As parcelas deste mês são apagadas"}, mas a compra parcelada continua nos outros meses.` : "") +
+        (metas ? " Os registros deste mês que contam para as suas metas também serão apagados, e o progresso delas vai diminuir." : ""),
+      details: n ? [["Registros", String(n)], [kind === "income" ? "Total de entradas" : "Total de saídas", fmt(total)]] : null,
       ok: "Excluir tabela",
     });
-    if (!ok) return;
-    const list = ctxs(kind), pos = list.findIndex(x => x.id === id);
-    if (pos < 0) return;                       // já excluída em outro aparelho enquanto o popup estava aberto
-    const c = list[pos];
-    const removed = {};                         // mês -> registros apagados, com a posição original
-    for (const m of monthIds()) {
-      const es = state.months[m].entries;
-      if (!es.some(e => e.ctx === id)) continue;
-      removed[m] = es.map((e, i) => [i, e]).filter(([, e]) => e.ctx === id);
-      state.months[m].entries = es.filter(e => e.ctx !== id);
-    }
-    state.settings[kind] = list.filter(x => x.id !== id);
-    if (state.plans.some(p => p.ctx === id)) { state.plans = state.plans.filter(p => p.ctx !== id); store.savePlans(); }
+    if (!ok || !state.months[mid] || !ctxs(kind).some(x => x.id === id)) return;   // pode ter mudado em outro aparelho
+    const m = state.months[mid];
+    if (state.edit && m.entries.some(e => e.ctx === id && e.id === state.edit.id)) state.edit = null;
+    m.entries = m.entries.filter(e => e.ctx !== id);
+    m.hide = [...new Set([...(m.hide || []), id])];
+    store.saveMonth(mid);
     delete state.drafts[id];
     if (state.menu === id) state.menu = null;
-    if (state.edit && removed[state.selected] && removed[state.selected].some(([, e]) => e.id === state.edit.id)) state.edit = null;
-    hist.record("settings");                   // não passa por store.mark: registra a ação aqui
-    Object.keys(removed).forEach(m => hist.record("m:" + m));
-    store.deleteContext(kind, id, Object.keys(removed));   // uma única operação no servidor
+    // não aparece em nenhum mês (nem tem compra parcelada): sai da lista geral também
+    const gone = monthIds().every(x => hiddenIn(x).has(id) && !state.months[x].entries.some(e => e.ctx === id)) && !state.plans.some(p => p.ctx === id);
+    if (gone) { state.settings[kind] = ctxs(kind).filter(x => x.id !== id); store.saveSettings(); }
+    hist.label(`Tabela "${c0.name}" excluída de ${monthLabel(mid)}`);
     render();
-    showToast(`Tabela "${c.name}" excluída` + (n ? ` com ${countLabel(n, "registro", "registros")}` : ""), 10000);
+    showToast(`Tabela "${c0.name}" excluída de ${monthLabel(mid)}` + (n ? ` com ${countLabel(n, "registro", "registros")}` : ""), 10000);
+  }
+  // Sem mês criado ainda: a tabela só existe na lista geral e sai dela
+  function deleteCtxEverywhere(kind, id) {
+    const c = ctxs(kind).find(x => x.id === id);
+    if (!c) return;
+    state.settings[kind] = ctxs(kind).filter(x => x.id !== id);
+    store.saveSettings();
+    hist.label(`Tabela "${c.name}" excluída`);
+    if (state.menu === id) state.menu = null;
+    render();
+    showToast(`Tabela "${c.name}" excluída`, 10000);
   }
 
   function newCard(kind) {
@@ -2721,7 +2734,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   function closeImport() { if ($("importDlg").open) $("importDlg").close(); }
   function ctxSelect(kind, value, onchange, label) {
     const s = el("select", { "aria-label": label, onchange: (ev) => onchange(ev.target.value) },
-      el("option", { value: "" }, "Escolha a tabela…"), ...ctxs(kind).map(c => el("option", { value: c.id }, c.name)));
+      el("option", { value: "" }, "Escolha a tabela…"), ...shownCtxs(kind).map(c => el("option", { value: c.id }, c.name)));
     s.value = value || "";
     return s;
   }
@@ -3103,10 +3116,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
   // (assim um mês anterior ainda vazio não zera a cópia).
   function copySources(id) {
     const before = monthIds().filter(x => x < id).reverse();
-    const out = new Map();
+    const out = new Map(), hid = new Set(inheritedHide(id));
     for (const m of before) {
       for (const e of state.months[m].entries) {
-        if (!findCtx(e.ctx)[1] || e.inst) continue;   // parcelas vêm das compras parceladas
+        if (!findCtx(e.ctx)[1] || e.inst || hid.has(e.ctx)) continue;   // parcelas vêm das compras parceladas; tabela excluída não volta
         if (!out.has(e.ctx)) out.set(e.ctx, { month: m, items: [] });
         const src = out.get(e.ctx);
         if (src.month === m) src.items.push(e);
@@ -3147,7 +3160,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
     goto(id);
   }
   // Cria o mês copiando as tabelas escolhidas (sel) e lançando as parcelas das compras parceladas
-  const defaultCopySel = () => new Set([...ctxs("income"), ...ctxs("expense")].filter(isRepeat).map(c => c.id));
+  const defaultCopySel = (mid) => { const hid = new Set(mid ? inheritedHide(mid) : []); return new Set([...ctxs("income"), ...ctxs("expense")].filter(c => isRepeat(c) && !hid.has(c.id)).map(c => c.id)); };
   function buildMonth(id, sel) {
     if (!state.months[id]) {
       const srcs = copySources(id), now = Date.now();
@@ -3164,7 +3177,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
         return o;
       }));
       const insts = state.plans.filter(p => planActive(p, id) && findCtx(p.ctx)[1]).map((p, i) => instEntry(p, id, now + copied.length + i));
-      state.months[id] = { entries: [...copied, ...insts] };
+      state.months[id] = monthDoc({ entries: [...copied, ...insts], hide: inheritedHide(id) });
       store.saveMonth(id);
       hist.label(`${monthLabel(id)} criado` + (copied.length ? ` com ${countLabel(copied.length, "item copiado", "itens copiados")}` : "") + (insts.length ? ` e ${countLabel(insts.length, "parcela", "parcelas")}` : ""));
       return copied.length + insts.length;

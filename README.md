@@ -154,7 +154,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - **Ordenar tabelas:** ao lado do título **Entradas** e **Saídas**, escolha **Manual (arrastar)**, **Nome A–Z**, **Nome Z–A**, **Maior valor**, **Menor valor** ou **Mais registros** (valor e registros do mês aberto). Fora do Manual, a alça de arrastar some.
 - **Ordenar itens de uma tabela:** no seletor **⇅** acima dos itens: **Data (dia 1 → 31)** (padrão), **Data (dia 31 → 1)**, **Nome A–Z**, **Nome Z–A**, **Maior valor** ou **Menor valor**. Cada tabela guarda a sua escolha.
 - As ordenações valem para todos os aparelhos e entram no **desfazer**.
-- **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: um popup mostra quantos registros e meses serão afetados e, ao confirmar, a tabela e todos os registros dela são apagados em todos os meses.
+- **Excluir tabela** pela lixeira no cabeçalho (ou no menu ⋯), mesmo com registros: a tabela e os registros dela saem **só do mês aberto**; os outros meses continuam como estão. Os meses criados depois também não trazem a tabela de volta.
 - **Menu ⋯ da tabela**: renomear, trocar a cor, mover, marcar "Repetir os itens ao criar o próximo mês", marcar "Manter esta cor ao trocar de tema" e excluir.
 - **Desfazer** no aviso que aparece depois de remover, mover, excluir ou limpar (veja também os botões fixos em **Geral**). O aviso fica 8 segundos, pausa com o mouse em cima e, se fosse cobrir o campo em que você digita, aparece no topo.
 - **Salvamento:** ao lado do nome do app, no topo, aparece **Salvo**, **Salvando…** ou **Sem conexão** (passe o mouse para ver os detalhes). Se algo não puder ser salvo, uma faixa vermelha fica presa no topo com o motivo e o botão **Tentar agora**; as alterações ficam guardadas no aparelho até conseguirem ser enviadas.
@@ -242,6 +242,7 @@ Quando houver novidades aqui no repositório, você pode trazê-las para o seu a
 - Composição por tabela em **rosca, barras ou colunas**, com porcentagens.
 - Evolução ao longo do tempo **empilhada ou em linhas**.
 - Indicadores, análises em texto (o que subiu, o que caiu) e visualização em tabela.
+- No **semestre** e no **ano**, o card **Tabelas ao longo dos meses** mostra cada tabela com o mês a mês, total, em quantos meses aparece, nº de lançamentos e o maior mês, ordenando por **maior valor** ou **mais frequentes**; as análises apontam a tabela mais frequente, as presentes em todos os meses e os gastos pontuais.
 
 ### Metas
 

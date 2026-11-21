@@ -69,6 +69,7 @@ function normalize(raw, problems) {
       if (ok.length !== m.entries.length) problems.push(`registros inválidos descartados em ${id}`);
       out.months[id] = { entries: ok };
       if (Number.isFinite(m.opening) && Math.abs(m.opening) <= MAX_VALUE) out.months[id].opening = m.opening;
+      if (Array.isArray(m.hide)) { const h = m.hide.filter(x => typeof x === "string" && x.length <= 40); if (h.length) out.months[id].hide = [...new Set(h)]; }
     }
   } else if (d.months !== undefined) problems.push("meses em formato inválido");
   out.goals = Array.isArray(d.goals) ? d.goals.filter(g => isObj(g) && typeof g.id === "string") : [];
@@ -290,6 +291,8 @@ function cleanMonth(b) {
   if (!uniqueIds(b.entries)) return null;
   // saldo no início do mês (opcional, pode ser negativo), usado na previsão do saldo
   if (b.opening !== undefined && !(typeof b.opening === "number" && Number.isFinite(b.opening) && Math.abs(b.opening) <= MAX_VALUE)) return null;
+  // tabelas excluídas só neste mês (ids)
+  if (b.hide !== undefined && !(Array.isArray(b.hide) && b.hide.length <= 500 && b.hide.every(id => isStr(id, 40)))) return null;
   const out = { entries: b.entries.map(e => {
     const o = { id: e.id, kind: e.kind, ctx: e.ctx, name: e.name, value: e.value };
     if (e.at !== undefined) o.at = e.at;
@@ -301,6 +304,7 @@ function cleanMonth(b) {
     return o;
   }) };
   if (b.opening !== undefined) out.opening = Math.round(b.opening * 100) / 100;
+  if (b.hide && b.hide.length) out.hide = [...new Set(b.hide)];
   return out;
 }
 
@@ -469,25 +473,6 @@ const server = http.createServer(async (req, res) => {
       safetyBackup("excluir-mes");
       delete data.months[m[1]];
       return send(res, 200, commit(["m:" + m[1]]));
-    }
-    // Exclui uma tabela e todos os registros dela, em todos os meses, numa única mudança
-    const cx = p.match(/^\/api\/contexts\/(expense|income)\/([^/]{1,40})$/);
-    if (cx && req.method === "DELETE") {
-      const [, kind, id] = cx;
-      if (diskBlocked(res)) return;
-      const keys = [];
-      const has = data.settings[kind].some(c => c.id === id);
-      const touched = Object.keys(data.months).filter(mid => data.months[mid].entries.some(e => e.ctx === id));
-      if (has || touched.length) {
-        safetyBackup("tabela");
-        if (has) { data.settings = { ...data.settings, [kind]: data.settings[kind].filter(c => c.id !== id) }; keys.push("settings"); }
-        for (const mid of touched) { data.months[mid] = { ...data.months[mid], entries: data.months[mid].entries.filter(e => e.ctx !== id) }; keys.push("m:" + mid); }
-      }
-      const out = keys.length ? commit(keys) : { rev: data.rev, prevRev: data.rev, docRev: {} };
-      out.docs = {};
-      if (has) out.docs.settings = data.settings;
-      for (const mid of touched) out.docs["m:" + mid] = data.months[mid];
-      return send(res, 200, out);
     }
     // Resposta curta para o painel saber que o servidor está vivo (sem baixar o caderno inteiro)
     if (p === "/api/health" && req.method === "GET") {
